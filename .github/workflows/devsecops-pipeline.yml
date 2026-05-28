@@ -5,6 +5,13 @@ on:
     branches: ["main", "develop"]
   pull_request:
     branches: ["main"]
+  workflow_dispatch:
+    inputs:
+      confirm_deploy:
+        description: "Type DEPLOY to confirm deployment"
+        required: true
+        default: "no"
+        type: string
 
 jobs:
   # ──────────────────────────────────────────
@@ -54,7 +61,7 @@ jobs:
         run: docker build -t fintech-app:${{ github.sha }} .
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: "fintech-app:${{ github.sha }}"
           format: "table"
@@ -63,7 +70,7 @@ jobs:
           ignore-unfixed: true
 
       - name: Trivy IaC scan (Terraform)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: "config"
           scan-ref: "."

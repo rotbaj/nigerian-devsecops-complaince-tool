@@ -16,34 +16,81 @@ from compliance_engine.scanner import scan_content, scan_path
 class TestSecretDetection:
 
     def test_detects_paystack_live_key(self):
-        content = 'SECRET_KEY = "sk_live_abcdefghijklmnopqrstuvwxyz123456"'
+        # Paystack live secret: sk_live_ + exactly 40 hex chars
+        content = 'SECRET_KEY = "sk_live_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"'
         findings = scan_content(content, "config.py")
         rule_ids = [f.rule_id for f in findings]
         assert "NG-SEC-001" in rule_ids
 
     def test_detects_flutterwave_test_key(self):
-        content = 'FLW_KEY = "FLWSECK_TEST-abcdefghijklmnopqrstuvwxyz1234-X"'
+        # Flutterwave test secret: FLWSECK_TEST- + 32 hex chars + -X
+        content = 'FLW_KEY = "FLWSECK_TEST-a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4-X"'
         findings = scan_content(content, "config.py")
         rule_ids = [f.rule_id for f in findings]
         assert "NG-SEC-002" in rule_ids
 
-    def test_detects_paystack_public_key(self):
-        content = 'PK = "pk_test_abcdefghijklmnopqrstuvwxyz123456"'
+    def test_detects_flutterwave_live_key(self):
+        # Flutterwave live secret: FLWSECK- + 32 hex chars + -X
+        content = 'FLW_KEY = "FLWSECK-a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4-X"'
+        findings = scan_content(content, "config.py")
+        rule_ids = [f.rule_id for f in findings]
+        assert "NG-SEC-002" in rule_ids
+
+    def test_detects_paystack_test_public_key(self):
+        # Paystack public key: pk_test_ + exactly 40 hex chars
+        content = 'PK = "pk_test_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"'
         findings = scan_content(content, "config.py")
         rule_ids = [f.rule_id for f in findings]
         assert "NG-SEC-003" in rule_ids
 
-    def test_detects_fake_bvn(self):
-        content = "user_bvn = 12345678901"
+    def test_detects_paystack_live_public_key(self):
+        # pk_live_ is also flagged (WARNING) even though it's a public key
+        content = 'PK = "pk_live_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"'
+        findings = scan_content(content, "config.py")
+        rule_ids = [f.rule_id for f in findings]
+        assert "NG-SEC-003" in rule_ids
+
+    def test_detects_flutterwave_public_key(self):
+        # Flutterwave public key: FLWPUBK- + 32 hex chars + -X
+        content = 'FLW_PUB = "FLWPUBK-a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4-X"'
+        findings = scan_content(content, "config.py")
+        rule_ids = [f.rule_id for f in findings]
+        assert "NG-SEC-006" in rule_ids
+
+    def test_detects_bvn_with_keyword_before(self):
+        # BVN keyword appears in variable name before the 11-digit value
+        content = 'user_bvn = "22522683105"'
         findings = scan_content(content, "user.py")
         rule_ids = [f.rule_id for f in findings]
         assert "NG-SEC-004" in rule_ids
 
+    def test_detects_bvn_with_keyword_after(self):
+        # BVN keyword appears in a comment after the value
+        content = '  "22522683105"  # bank_verification'
+        findings = scan_content(content, "user.py")
+        rule_ids = [f.rule_id for f in findings]
+        assert "NG-SEC-004" in rule_ids
+
+    def test_phone_number_without_bvn_keyword_not_flagged_as_bvn(self):
+        # A Nigerian phone number must NOT trigger the BVN rule — no keyword context
+        content = 'phone_number = "08012345678"'
+        findings = scan_content(content, "user.py")
+        bvn_findings = [f for f in findings if f.rule_id == "NG-SEC-004"]
+        assert len(bvn_findings) == 0
+
     def test_detects_nigerian_phone_number(self):
+        # Phone rule triggers when assigned to a phone/mobile/tel variable
         content = 'phone = "+2348012345678"'
         findings = scan_content(content, "user.py")
         rule_ids = [f.rule_id for f in findings]
         assert "NG-SEC-005" in rule_ids
+
+    def test_phone_not_flagged_when_no_phone_keyword(self):
+        # Without phone/mobile/tel context, a Nigerian number should not trigger NG-SEC-005
+        content = 'contact = "+2348012345678"'
+        findings = scan_content(content, "user.py")
+        phone_findings = [f for f in findings if f.rule_id == "NG-SEC-005"]
+        assert len(phone_findings) == 0
 
     def test_clean_code_has_no_secret_findings(self):
         content = """
@@ -90,6 +137,21 @@ class TestNDPACompliance:
         ndpa_findings = [f for f in findings if f.category == "ndpa"]
         assert len(ndpa_findings) == 0
 
+    def test_ndpa_rules_not_applied_to_python_files(self):
+        # A comment in a .py file mentioning us-east-1 must NOT fail the build.
+        # NDPA sovereignty rules are infrastructure-file-only to prevent false positives.
+        content = '# We migrated away from us-east-1 last year — do not use'
+        findings = scan_content(content, "README_migration.py")
+        ndpa_findings = [f for f in findings if f.category == "ndpa"]
+        assert len(ndpa_findings) == 0
+
+    def test_ndpa_rules_applied_to_yaml_files(self):
+        # YAML pipeline files that reference non-compliant regions must be flagged.
+        content = 'AWS_DEFAULT_REGION: us-east-1'
+        findings = scan_content(content, "deploy.yml")
+        rule_ids = [f.rule_id for f in findings]
+        assert "NG-NDPA-001" in rule_ids
+
 
 # ─── Container Security Tests ──────────────────────────────────
 
@@ -113,11 +175,25 @@ class TestContainerSecurity:
         rule_ids = [f.rule_id for f in findings]
         assert "NG-CONT-003" in rule_ids
 
+    def test_detects_untagged_docker_image(self):
+        # "FROM python" with no tag defaults to :latest — must be flagged
+        content = "FROM python\n"
+        findings = scan_content(content, "Dockerfile")
+        rule_ids = [f.rule_id for f in findings]
+        assert "NG-CONT-003" in rule_ids
+
     def test_pinned_tag_no_warning(self):
         content = "FROM node:18.20.0\nUSER 1001\n"
         findings = scan_content(content, "Dockerfile")
         container_findings = [f for f in findings if f.category == "container"]
         assert len(container_findings) == 0
+
+    def test_pinned_digest_no_warning(self):
+        # An image pinned by sha256 digest is fully reproducible — no warning
+        content = "FROM node@sha256:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2\n"
+        findings = scan_content(content, "Dockerfile")
+        cont_findings = [f for f in findings if f.category == "container"]
+        assert len(cont_findings) == 0
 
 
 # ─── Scan Result / Pass-Fail Logic Tests ──────────────────────
@@ -125,7 +201,15 @@ class TestContainerSecurity:
 class TestScanResult:
 
     def test_critical_finding_fails_build(self):
-        result = scan_path("tests/fixtures/bad_code_sample.py")
+        # Scans the whole fixtures/ directory so both bad_code_sample.py
+        # and bad_terraform.tf are covered in a single assertion.
+        # Run generate_eval_data.py once to create these files before running tests.
+        fixtures_dir = os.path.join(os.path.dirname(__file__), "fixtures")
+        result = scan_path(fixtures_dir)
+        assert result.files_scanned >= 2, (
+            "Run `python generate_eval_data.py` from the project root first "
+            "to create the test fixture files in tests/fixtures/"
+        )
         assert result.passed is False
         assert result.critical > 0
 
@@ -145,8 +229,29 @@ region = "af-south-1"
         finally:
             os.unlink(tmpfile)
 
+    def test_github_workflows_directory_is_scanned(self):
+        # .github/workflows/ must NOT be skipped — pipeline YAML is a supply-chain
+        # attack surface. Secrets or unpinned actions there must be caught.
+        import tempfile, os
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workflow_dir = os.path.join(tmpdir, ".github", "workflows")
+            os.makedirs(workflow_dir)
+            bad_yml = os.path.join(workflow_dir, "pipeline.yml")
+            with open(bad_yml, "w") as f:
+                f.write("AWS_DEFAULT_REGION: us-east-1\n")
+            result = scan_path(tmpdir)
+        assert result.files_scanned >= 1
+        ndpa_findings = [f for f in result.findings if f.category == "ndpa"]
+        assert len(ndpa_findings) > 0
+
     def test_finding_line_content_is_redacted(self):
-        content = 'KEY = "sk_live_abcdefghijklmnopqrstuvwxyz123456"'
+        # Use a valid 40-hex-char Paystack key so the pattern actually matches
+        content = 'KEY = "sk_live_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"'
         findings = scan_content(content, "config.py")
+        assert len(findings) > 0, "Pattern did not match — check the test key length"
         for finding in findings:
             assert "sk_live_" not in finding.line_content
+
+
+git config user.name "rotbaj"
+git config user.email "rotimi.bajomo@hotmail.com"

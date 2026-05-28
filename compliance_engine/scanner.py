@@ -21,7 +21,8 @@ RULES = [
         "id": "NG-SEC-001",
         "name": "Paystack Live Secret Key",
         "severity": "CRITICAL",
-        "pattern": r"sk_live_[a-zA-Z0-9]{32,}",
+        # Paystack live secret keys are exactly sk_live_ followed by 40 hex chars
+        "pattern": r"sk_live_[a-fA-F0-9]{40}",
         "category": "secret",
         "description": "Paystack live secret key exposed in source code.",
         "remediation": "Rotate the key immediately and store it in an environment variable or secrets manager.",
@@ -30,36 +31,58 @@ RULES = [
         "id": "NG-SEC-002",
         "name": "Flutterwave Secret Key",
         "severity": "CRITICAL",
-        "pattern": r"FLWSECK_TEST-[a-zA-Z0-9]{32,}|FLWSECK-[a-zA-Z0-9]{32,}",
+        # FLWSECK(?:_TEST)? collapses the two alternates into one non-capturing group
+        "pattern": r"FLWSECK(?:_TEST)?-[a-fA-F0-9]{32}-X",
         "category": "secret",
         "description": "Flutterwave secret key exposed in source code.",
         "remediation": "Rotate the key immediately and store it in a secrets manager.",
     },
     {
         "id": "NG-SEC-003",
-        "name": "Paystack Public Key (Test)",
+        "name": "Paystack Public Key",
         "severity": "WARNING",
-        "pattern": r"pk_test_[a-zA-Z0-9]{32,}",
+        # Covers both test (pk_test_) and live (pk_live_) public keys — 40 hex chars each
+        "pattern": r"pk_test_[a-fA-F0-9]{40}|pk_live_[a-fA-F0-9]{40}",
         "category": "secret",
-        "description": "Paystack test public key found. Avoid hardcoding even test keys.",
+        "description": "Paystack public key hardcoded in source code. Avoid committing any key, even public ones.",
         "remediation": "Move to environment variables for consistency and safety.",
     },
     {
+        "id": "NG-SEC-006",
+        "name": "Flutterwave Public Key",
+        "severity": "WARNING",
+        # FLW public keys are FLWPUBK- followed by 32 hex chars and -X suffix
+        "pattern": r"FLWPUBK-[a-fA-F0-9]{32}-X",
+        "category": "secret",
+        "description": "Flutterwave public key hardcoded in source code.",
+        "remediation": "Move to environment variables. Even public keys should not be committed.",
+    },
+    {
         "id": "NG-SEC-004",
-        "name": "Hardcoded BVN Pattern",
+        "name": "Hardcoded BVN",
         "severity": "CRITICAL",
-        "pattern": r"\b[0-9]{11}\b",
+        # Only flag 11-digit numbers that appear within ~40 chars of a BVN keyword.
+        # This prevents false positives on phone numbers, amounts, and timestamps.
+        # Matches: user_bvn = "22522683105"  (keyword before)
+        # Matches: "22522683105"  # bank_verification_number  (keyword after)
+        # Ignores: phone_number = "08012345678"
+        "pattern": (
+            r"(?:bvn|bank_verification|biometric).{0,40}[0-9]{11}"
+            r"|[0-9]{11}.{0,40}(?:bvn|bank_verification|biometric)"
+        ),
         "category": "pii",
-        "description": "Potential BVN (11-digit number) found in source code.",
+        "description": "BVN (Bank Verification Number) detected in source code.",
         "remediation": "Remove all PII from source code. Use tokenisation or masked references.",
     },
     {
         "id": "NG-SEC-005",
         "name": "Nigerian Phone Number",
         "severity": "WARNING",
-        "pattern": r"\b(\+?234|0)[789][01]\d{8}\b",
+        # Only flag a Nigerian phone number when it is assigned to a phone/mobile/tel variable.
+        # This avoids BVN overlap and reduces noise from 11-digit numbers in non-PII contexts.
+        "pattern": r"(?:phone|mobile|tel)[_\w]{0,20}\s*[:=]\s*['\"]?(?:\+?234|0)[789][01]\d{8}['\"]?",
         "category": "pii",
-        "description": "Nigerian phone number pattern detected in source code.",
+        "description": "Nigerian phone number assigned to a phone/mobile/tel variable in source code.",
         "remediation": "Ensure this is not real user data. Remove from code and test fixtures.",
     },
 
@@ -122,14 +145,23 @@ RULES = [
     },
     {
         "id": "NG-CONT-003",
-        "name": "Latest Docker Tag",
+        "name": "Unpinned Docker Image",
         "severity": "WARNING",
-        "pattern": r"FROM\s+\w[^:]+:latest",
+        # Catches two unpinned cases:
+        # 1. Explicit :latest tag  →  FROM node:latest
+        # 2. No tag at all (Docker defaults to :latest)  →  FROM node
+        # Does NOT fire on pinned versions/digests  →  FROM node:18.20.0  /  FROM node@sha256:...
+        "pattern": r"FROM\s+(?:--\S+\s+)*(?:\S+:latest|[a-zA-Z][^\s:@]*(?:\s|$))",
         "category": "container",
-        "description": "Docker image using :latest tag is unpinned and non-reproducible.",
-        "remediation": "Pin to a specific image digest or version tag.",
+        "description": "Docker image is unpinned (explicit :latest or no tag). Builds are non-reproducible.",
+        "remediation": "Pin to a specific version tag or image digest, e.g. FROM node:18.20.0-slim.",
     },
 ]
+
+
+# Compile every pattern once at import time instead of inside the hot scan loop.
+for _rule in RULES:
+    _rule["_compiled"] = re.compile(_rule["pattern"], re.IGNORECASE)
 
 
 # ─────────────────────────────────────────────
@@ -191,16 +223,24 @@ def should_scan_file(filepath: str) -> bool:
     return False
 
 
+# NDPA sovereignty/encryption rules are meaningful only in infrastructure files.
+# Applying them to .py or .js would flag comments like "# migrated from us-east-1"
+# and fail the build on non-infra code.
+_INFRA_EXTENSIONS = {".tf", ".yml", ".yaml"}
+
+
 def scan_content(content: str, filename: str) -> List[Finding]:
-    """Scan file content against all rules and return findings."""
     findings = []
     lines = content.splitlines()
+    _, ext = os.path.splitext(filename)
 
     for rule in RULES:
-        pattern = re.compile(rule["pattern"], re.IGNORECASE)
+        if rule["category"] == "ndpa" and ext.lower() not in _INFRA_EXTENSIONS:
+            continue
+
+        pattern = rule["_compiled"]
         for line_no, line in enumerate(lines, start=1):
             if pattern.search(line):
-                # Redact the matched value in the report for safety
                 redacted = pattern.sub("[REDACTED]", line).strip()
                 findings.append(Finding(
                     rule_id=rule["id"],
@@ -220,14 +260,23 @@ def scan_path(path: str) -> ScanResult:
     """Scan a file or directory. Returns a ScanResult."""
     result = ScanResult()
 
+    # Directories that are never scanned, regardless of name convention.
+    # .github is intentionally NOT in this set — pipeline YAML files are a
+    # primary attack surface for supply-chain issues and must be scanned.
+    _SKIP_DIRS = {"node_modules", "__pycache__", ".git", ".venv", "venv"}
+
     if os.path.isfile(path):
         files = [path]
     else:
         files = []
-        for root, _, filenames in os.walk(path):
-            # Skip hidden dirs and common non-source dirs
+        for root, dirs, filenames in os.walk(path):
             root_parts = root.replace("\\", "/").split("/")
-            if any(p.startswith(".") or p in ("node_modules", "__pycache__", ".git") for p in root_parts):
+            if any(
+                p in _SKIP_DIRS or (p.startswith(".") and p != ".github")
+                for p in root_parts
+            ):
+                # Also prune os.walk's descent into skipped dirs for efficiency
+                dirs[:] = []
                 continue
             for fname in filenames:
                 files.append(os.path.join(root, fname))

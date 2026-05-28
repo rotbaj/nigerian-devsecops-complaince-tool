@@ -4,6 +4,7 @@ Run with: streamlit run dashboard/app.py
 """
 
 import streamlit as st
+import pandas as pd
 import json
 import os
 import sys
@@ -151,7 +152,10 @@ if result_data:
         for f in findings:
             category_counts[f["category"]] = category_counts.get(f["category"], 0) + 1
 
-        st.bar_chart(data={k: [v] for k, v in category_counts.items()})
+        chart_df = pd.DataFrame.from_dict(
+            {"Findings": category_counts}, orient="columns"
+        )
+        st.bar_chart(chart_df)
 
     # ── Scan Metadata ──
     st.markdown("---")
