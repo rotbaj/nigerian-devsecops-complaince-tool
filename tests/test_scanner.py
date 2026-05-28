@@ -251,7 +251,3 @@ region = "af-south-1"
         assert len(findings) > 0, "Pattern did not match — check the test key length"
         for finding in findings:
             assert "sk_live_" not in finding.line_content
-
-
-git config user.name "rotbaj"
-git config user.email "rotimi.bajomo@hotmail.com"
