@@ -1,17 +1,17 @@
 name: 🛡️ Nigerian Fintech DevSecOps Pipeline
 
-on:
-  push:
-    branches: ["main", "develop"]
-  pull_request:
-    branches: ["main"]
-  workflow_dispatch:
-    inputs:
-      confirm_deploy:
-        description: "Type DEPLOY to confirm deployment"
-        required: true
-        default: "no"
-        type: string
+# on:
+#   push:
+#     branches: ["main", "develop"]
+#   pull_request:
+#     branches: ["main"]
+#   workflow_dispatch:
+#     inputs:
+#       confirm_deploy:
+#         description: "Type DEPLOY to confirm deployment"
+#         required: true
+#         default: "no"
+#         type: string
 
 jobs:
   # ──────────────────────────────────────────
