@@ -1,4 +1,4 @@
-# 🛡️ Nigerian Fintech DevSecOps Framework
+# Nigerian Fintech DevSecOps Framework
 
 > Automated security & NDPA 2023 compliance scanning for Nigerian Fintech CI/CD pipelines.
 
