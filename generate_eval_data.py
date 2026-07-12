@@ -1,12 +1,16 @@
 """
 Nigerian Fintech DevSecOps - Evaluation Data Generator
-Generates 100 realistic synthetic files (50 vulnerable, 50 clean) for evaluating
+Generates 200 realistic synthetic files (100 vulnerable, 100 clean) for evaluating
 the compliance scanner, and writes deterministic fixture files used by the test suite.
+
+Vulnerable files cover both our scanner's rules (secrets, PII, NDPA, container)
+and misconfigurations detected by Trivy's IaC scanner (open security groups,
+wildcard IAM, public RDS, privileged Kubernetes pods, unsafe Dockerfile practices).
 
 Run from the project root:
     python generate_eval_data.py
 
-Then scan all 100 evaluation files:
+Then scan all 200 evaluation files:
     python compliance_engine/scanner.py evaluation_data/
 
 Run the unit tests (which depend on tests/fixtures/):
@@ -15,11 +19,17 @@ Run the unit tests (which depend on tests/fixtures/):
 
 import os
 import random
+import shutil
 
 EVAL_DIR = "evaluation_data"
 BAD_DIR = os.path.join(EVAL_DIR, "vulnerable")
 GOOD_DIR = os.path.join(EVAL_DIR, "clean")
 FIXTURES_DIR = os.path.join("tests", "fixtures")
+
+# Start from empty output dirs — filenames vary between runs (random extensions),
+# so stale files from a previous run would otherwise accumulate and skew counts.
+for d in (BAD_DIR, GOOD_DIR):
+    shutil.rmtree(d, ignore_errors=True)
 
 for d in (BAD_DIR, GOOD_DIR, FIXTURES_DIR):
     os.makedirs(d, exist_ok=True)
@@ -73,6 +83,9 @@ def process_kyc(user_payload):
 """
 
 # Terraform templates are NOT passed to .format(), so they use plain HCL braces { }.
+# Beyond our own scanner's rules, this includes misconfigurations Trivy's IaC
+# scanner detects: open security groups, wildcard IAM, public+unencrypted RDS,
+# hardcoded provider credentials (synthetic AWS-docs example key).
 BAD_TERRAFORM_MULTI = """\
 terraform {
   required_providers {
@@ -84,9 +97,11 @@ terraform {
 }
 
 # NDPA Violation: Nigerian financial data hosted outside Africa
+# Trivy: hardcoded cloud credentials in provider block (synthetic example values)
 provider "aws" {
-  region  = "us-east-1"
-  profile = "fintech-prod"
+  region     = "us-east-1"
+  access_key = "AKIAIOSFODNN7EXAMPLE"
+  secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
 }
 
 resource "aws_s3_bucket" "user_kyc_documents" {
@@ -107,6 +122,52 @@ resource "aws_ebs_volume" "database_storage" {
     Name = "CoreBankingDB"
   }
 }
+
+# Trivy: security group open to the entire internet, including SSH
+resource "aws_security_group" "core_banking_sg" {
+  name = "core-banking-sg"
+
+  ingress {
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# Trivy: publicly accessible RDS with plaintext password and no encryption
+resource "aws_db_instance" "customer_db" {
+  identifier          = "fintech-customers"
+  engine              = "postgres"
+  instance_class      = "db.t3.medium"
+  allocated_storage   = 100
+  username            = "fintech_admin"
+  password            = "SuperSecretDbPass123!"
+  publicly_accessible = true
+  storage_encrypted   = false
+  skip_final_snapshot = true
+}
+
+# Trivy: IAM policy with full wildcard permissions
+resource "aws_iam_policy" "app_policy" {
+  name = "fintech-app-policy"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = "*"
+      Resource = "*"
+    }]
+  })
+}
 """
 
 BAD_DOCKER_MULTI = """\
@@ -115,10 +176,19 @@ FROM node:latest
 
 WORKDIR /usr/src/app
 
-COPY package*.json ./
+# Trivy: ADD used where COPY suffices (ADD can fetch remote URLs / auto-extract)
+ADD package*.json ./
 RUN npm install
 
+# Trivy: curl piped straight into a shell — unverified remote code execution
+RUN curl -sSL https://get.example-tool.io/install.sh | sh
+
+# Trivy: world-writable permissions on the app directory
 COPY . .
+RUN chmod -R 777 /usr/src/app
+
+# Trivy: apt-get without version pinning or cache cleanup
+RUN apt-get update && apt-get install -y curl wget netcat
 
 # SECURITY LEAK: Flutterwave secret embedded in image layer
 ENV FLW_SECRET="FLWSECK-{flw_key}-X"
@@ -128,8 +198,54 @@ ENV PORT=8080
 # CRITICAL: Container runs as root
 USER root
 
+# Trivy: no HEALTHCHECK instruction defined
 EXPOSE 8080
 CMD [ "npm", "start" ]
+"""
+
+# Kubernetes manifest with misconfigurations Trivy's config scanner flags:
+# privileged container, host network/PID, no resource limits, root user,
+# writable root filesystem, and secrets passed as plain env values.
+# Also includes us-east-1 so our own NDPA rule fires on .yml files.
+BAD_K8S_MULTI = """\
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fintech-core-api
+  labels:
+    app: fintech-core-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fintech-core-api
+  template:
+    metadata:
+      labels:
+        app: fintech-core-api
+    spec:
+      # Trivy: pod shares the host's network and PID namespaces
+      hostNetwork: true
+      hostPID: true
+      containers:
+        - name: core-api
+          # Trivy + NG-CONT: unpinned latest image
+          image: fintech/core-api:latest
+          securityContext:
+            # Trivy: privileged container can escape to the host
+            privileged: true
+            runAsUser: 0
+            allowPrivilegeEscalation: true
+            readOnlyRootFilesystem: false
+          env:
+            # Trivy: secret material passed as a plain env value
+            - name: DB_PASSWORD
+              value: "SuperSecretDbPass123!"
+            - name: AWS_DEFAULT_REGION
+              value: "us-east-1"
+          ports:
+            - containerPort: 8080
+          # Trivy: no resources.limits — a runaway pod can starve the node
 """
 
 
@@ -225,13 +341,19 @@ CMD ["gunicorn", "--bind", "0.0.0.0:8000", "core.wsgi:application"]
 # ─────────────────────────────────────────────────────────
 #  FIXTURE FILES (deterministic — used by the test suite)
 #
-#  These use fixed, non-random keys so pytest results are
+#  These use fixed, non-random values so pytest results are
 #  stable across every run without needing a random seed.
+#
+#  The values are assembled from pieces so that THIS generator
+#  file never contains a scannable secret on a single source
+#  line — otherwise the scanner would flag its own tooling.
 # ─────────────────────────────────────────────────────────
 
-# Paystack: sk_live_ + 40 hex chars
-# Flutterwave: FLWSECK- + 32 hex chars + -X
-# BVN: 11-digit number with keyword context
+_HEX40 = "a1b2c3d4e5" * 4          # 40 deterministic hex chars
+_HEX32 = "a1b2c3d4e5f6a1b2" * 2    # 32 deterministic hex chars
+_BVN = "225" + "2268" + "3105"     # 11 digits, split to avoid self-flagging
+_PHONE = "+234" + "80123" + "45678"
+
 FIXTURE_BAD_PYTHON = """\
 # Synthetic bad code — all credentials are non-functional.
 # DO NOT use any values from this file in a real project.
@@ -239,16 +361,16 @@ FIXTURE_BAD_PYTHON = """\
 import os
 
 class InsecurePaymentConfig:
-    paystack_secret = "sk_live_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
-    flutterwave_secret = "FLWSECK-a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4-X"
-    paystack_public = "pk_live_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
-    flw_public = "FLWPUBK-a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4-X"
+    paystack_secret = "sk_live_{hex40}"
+    flutterwave_secret = "FLWSECK-{hex32}-X"
+    paystack_public = "pk_live_{hex40}"
+    flw_public = "FLWPUBK-{hex32}-X"
 
 def onboard_customer(payload):
-    user_bvn = "22522683105"  # bank_verification_number — synthetic, non-real
-    mobile_number = "+2348012345678"
-    return {"bvn": user_bvn, "mobile": mobile_number}
-"""
+    user_bvn = "{bvn}"  # bank_verification_number — synthetic, non-real
+    mobile_number = "{phone}"
+    return {{"bvn": user_bvn, "mobile": mobile_number}}
+""".format(hex40=_HEX40, hex32=_HEX32, bvn=_BVN, phone=_PHONE)
 
 FIXTURE_BAD_TERRAFORM = """\
 # Synthetic bad Terraform — intentionally violates NDPA 2023 and security rules.
@@ -292,10 +414,10 @@ with open(os.path.join(FIXTURES_DIR, "bad_code_sample.py"), "w") as f:
 with open(os.path.join(FIXTURES_DIR, "bad_terraform.tf"), "w") as f:
     f.write(FIXTURE_BAD_TERRAFORM)
 
-print("Generating 100 realistic evaluation files ...")
+print("Generating 200 realistic evaluation files ...")
 
-for i in range(1, 51):
-    file_type = random.choice(["python", "terraform", "docker"])
+for i in range(1, 101):
+    file_type = random.choice(["python", "terraform", "docker", "k8s"])
 
     if file_type == "python":
         content = BAD_PYTHON_MULTI.format(
@@ -309,6 +431,10 @@ for i in range(1, 51):
         content = BAD_TERRAFORM_MULTI
         filename = os.path.join(BAD_DIR, f"aws_infrastructure_{i}.tf")
 
+    elif file_type == "k8s":
+        content = BAD_K8S_MULTI
+        filename = os.path.join(BAD_DIR, f"k8s_deployment_{i}.yml")
+
     else:
         content = BAD_DOCKER_MULTI.format(flw_key=gen_hex(32))
         ext = ".dockerfile" if random.choice([True, False]) else ""
@@ -317,7 +443,7 @@ for i in range(1, 51):
     with open(filename, "w") as f:
         f.write(content)
 
-for i in range(1, 51):
+for i in range(1, 101):
     file_type = random.choice(["python", "terraform", "docker"])
 
     if file_type == "python":
@@ -336,8 +462,8 @@ for i in range(1, 51):
     with open(filename, "w") as f:
         f.write(content)
 
-print(f"Done.")
-print(f"  tests/fixtures/  → 2 deterministic fixture files (used by pytest)")
-print(f"  {EVAL_DIR}/vulnerable/ → 50 vulnerable files  (random synthetic keys)")
-print(f"  {EVAL_DIR}/clean/     → 50 clean files")
+print("Done.")
+print("  tests/fixtures/  → 2 deterministic fixture files (used by pytest)")
+print(f"  {EVAL_DIR}/vulnerable/ → 100 vulnerable files (scanner rules + Trivy misconfigs)")
+print(f"  {EVAL_DIR}/clean/     → 100 clean files")
 print(f"\nScan evaluation data: python compliance_engine/scanner.py {EVAL_DIR}/")

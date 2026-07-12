@@ -1,17 +1,11 @@
 name: Nigerian Fintech DevSecOps Pipeline
 
-# on:
-#   push:
-#     branches: ["main", "develop"]
-#   pull_request:
-#     branches: ["main"]
-#   workflow_dispatch:
-#     inputs:
-#       confirm_deploy:
-#         description: "Type DEPLOY to confirm deployment"
-#         required: true
-#         default: "no"
-#         type: string
+on:
+  push:
+    branches: ["main", "develop"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
 
 jobs:
   # ──────────────────────────────────────────
@@ -28,22 +22,179 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.9"
+          python-version: "3.12"
 
       - name: Install dependencies
         run: pip install -r requirements.txt
 
       - name: Run Nigerian Fintech Compliance Engine
-        run: |
-          python compliance_engine/scanner.py . --report reports/scan_report.json
+        # tests/ and evaluation_data/ intentionally contain synthetic secrets
+        # for testing the scanner itself, so they are excluded here.
         # Exit code 1 = CRITICAL or HIGH findings → pipeline fails and blocks merge
+        run: |
+          python compliance_engine/scanner.py . --exclude tests,evaluation_data --report reports/scan_report.json
 
       - name: Upload Compliance Report
         uses: actions/upload-artifact@v4
         if: always()   # Upload even if scan fails so the team can review
         with:
           name: compliance-report
-          path: reports/scan_report.json
+          path: |
+            reports/scan_report.json
+            reports/scan_history.json
+
+  # ──────────────────────────────────────────
+  # Stage 1b: Evaluation Corpus Scan
+  # Proves the scanner works: the clean corpus must pass with zero
+  # findings, and the vulnerable corpus must be caught (scan must fail).
+  # Each scan's results are rendered on the run's Summary page, and the
+  # report JSONs are uploaded so they can be viewed in the dashboard
+  # (Load Report mode → upload the downloaded file).
+  # ──────────────────────────────────────────
+  evaluation:
+    name: 🎯 Evaluation Corpus Scan
+    runs-on: ubuntu-latest
+    needs: compliance-scan
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate evaluation corpus
+        # evaluation_data/ is git-ignored (it contains synthetic secrets),
+        # so the 200-file corpus is generated fresh on every run.
+        run: python generate_eval_data.py
+
+      - name: Scan clean corpus (must pass with zero findings)
+        run: |
+          python compliance_engine/scanner.py evaluation_data/clean \
+            --fail-on-warning --report reports/clean_report.json
+
+      - name: Scan vulnerable corpus (scanner must catch it)
+        # Exit code 1 is the CORRECT outcome here — it means the scanner
+        # detected the planted issues. The step fails only if the scan PASSES.
+        run: |
+          if python compliance_engine/scanner.py evaluation_data/vulnerable \
+              --report reports/vulnerable_report.json; then
+            echo "::error::Vulnerable corpus passed the scan — detection is broken"
+            exit 1
+          fi
+          echo "Vulnerable corpus correctly failed the scan."
+
+      - name: Publish scan results to run summary
+        if: always()
+        run: |
+          python3 - <<'EOF' >> $GITHUB_STEP_SUMMARY
+          import json, os
+
+          def section(title, path, expect_findings):
+              print(f"## {title}")
+              if not os.path.exists(path):
+                  print("_Report not produced (scan step failed early)._\n")
+                  return
+              r = json.load(open(path))
+              detected = len({f["filename"] for f in r["findings"]})
+              ok = (detected == 0) if not expect_findings else (detected == 100)
+              print("| Metric | Value |")
+              print("|--------|-------|")
+              print(f"| Files scanned | {r['files_scanned']} |")
+              print(f"| Files with findings | {detected} |")
+              print(f"| Total findings | {r['total_findings']} |")
+              print(f"| Critical / High / Warning | {r['critical']} / {r['high']} / {r['warning']} |")
+              if expect_findings:
+                  print(f"| Detection rate | {'✅' if ok else '❌'} {detected}/100 vulnerable files caught |")
+              else:
+                  print(f"| False positives | {'✅ none' if ok else f'❌ {detected} clean files flagged'} |")
+              print()
+
+          section("🟢 Clean corpus (100 files — expected: no findings)",
+                  "reports/clean_report.json", expect_findings=False)
+          section("🔴 Vulnerable corpus (100 files — expected: all caught)",
+                  "reports/vulnerable_report.json", expect_findings=True)
+          print("To inspect either scan in the dashboard: download the "
+                "`evaluation-reports` artifact below, unzip it, then run the "
+                "dashboard locally and drop the JSON into **Load Report** mode.")
+          EOF
+
+      - name: Upload evaluation reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: evaluation-reports
+          path: |
+            reports/clean_report.json
+            reports/vulnerable_report.json
+            reports/scan_history.json
+
+  # ──────────────────────────────────────────
+  # Stage 1c: Publish Results Branch
+  # Pushes every run's reports + accumulated scan history to the
+  # 'scan-results' branch. The dashboard (local or hosted on Streamlit
+  # Cloud) reads that branch, so stakeholders always see the latest CI
+  # results without touching the pipeline.
+  # ──────────────────────────────────────────
+  publish-results:
+    name: 📤 Publish Results for Dashboard
+    runs-on: ubuntu-latest
+    needs: [compliance-scan, evaluation]
+    # Runs even when a scan failed — failed scans are exactly what the
+    # dashboard needs to show. Skipped on PRs (no write access from forks).
+    if: ${{ always() && github.event_name != 'pull_request' }}
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all scan reports
+        uses: actions/download-artifact@v4
+        with:
+          path: ci_reports
+
+      - name: Push reports to scan-results branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          mkdir results
+          # Carry the accumulated history forward if the branch already exists
+          if git fetch origin scan-results 2>/dev/null; then
+            git show origin/scan-results:scan_history.json > results/scan_history.json || echo "[]" > results/scan_history.json
+          else
+            echo "[]" > results/scan_history.json
+          fi
+          python3 - <<'EOF'
+          import glob, json, shutil
+          history = json.load(open("results/scan_history.json"))
+          seen = {(e["scanned_at"], e["target"]) for e in history}
+          for path in sorted(glob.glob("ci_reports/*/scan_history.json")):
+              for entry in json.load(open(path)):
+                  key = (entry["scanned_at"], entry["target"])
+                  if key not in seen:
+                      history.append(entry)
+                      seen.add(key)
+          history.sort(key=lambda e: e["scanned_at"])
+          json.dump(history, open("results/scan_history.json", "w"), indent=2)
+          for name in ("scan_report.json", "clean_report.json", "vulnerable_report.json"):
+              for path in glob.glob(f"ci_reports/*/{name}"):
+                  shutil.copy(path, f"results/{name}")
+          EOF
+          cd results
+          git init -q -b scan-results
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -q -m "CI scan results for ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" scan-results
 
   # ──────────────────────────────────────────
   # Stage 2: Container Security Scan (Trivy)
@@ -93,10 +244,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.9"
+          python-version: "3.12"
 
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      - name: Generate test fixtures
+        # tests/fixtures/ is git-ignored (it contains synthetic secrets),
+        # so the fixtures must be generated fresh before running the suite.
+        run: python generate_eval_data.py
 
       - name: Run tests
         run: pytest tests/ -v --tb=short
@@ -107,7 +263,7 @@ jobs:
   summary:
     name: 📋 Pipeline Summary
     runs-on: ubuntu-latest
-    needs: [compliance-scan, container-scan, test]
+    needs: [compliance-scan, evaluation, container-scan, test]
     if: always()
 
     steps:

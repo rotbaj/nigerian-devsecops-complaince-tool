@@ -1,7 +1,8 @@
 # ── Nigerian Fintech DevSecOps - App Dockerfile ────────────────
 # Used by the CI/CD pipeline for Trivy container scanning
 
-FROM python:3.9-slim
+# Python 3.9 reached end-of-life in October 2025 — 3.12 receives security patches
+FROM python:3.12-slim
 
 # Security: non-root user
 RUN useradd -m -u 1001 appuser

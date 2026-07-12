@@ -7,7 +7,7 @@ import re
 import json
 import os
 from dataclasses import dataclass, field, asdict
-from typing import List
+from typing import List, Optional
 from datetime import datetime, timezone
 
 
@@ -63,12 +63,14 @@ RULES = [
         "severity": "CRITICAL",
         # Only flag 11-digit numbers that appear within ~40 chars of a BVN keyword.
         # This prevents false positives on phone numbers, amounts, and timestamps.
-        # Matches: user_bvn = "22522683105"  (keyword before)
-        # Matches: "22522683105"  # bank_verification_number  (keyword after)
-        # Ignores: phone_number = "08012345678"
+        # (?<![0-9]) / (?![0-9]) ensure exactly 11 digits — a 12-digit number is not a BVN.
+        # (Examples use "…" so this file doesn't flag its own documentation.)
+        # Matches: user_bvn = "22522683…"  (keyword before the number)
+        # Matches: "22522683…"  # bank_verification_number  (keyword after)
+        # Ignores: account_no = "080…" with no BVN keyword nearby
         "pattern": (
-            r"(?:bvn|bank_verification|biometric).{0,40}[0-9]{11}"
-            r"|[0-9]{11}.{0,40}(?:bvn|bank_verification|biometric)"
+            r"(?:bvn|bank_verification|biometric).{0,40}(?<![0-9])[0-9]{11}(?![0-9])"
+            r"|(?<![0-9])[0-9]{11}(?![0-9]).{0,40}(?:bvn|bank_verification|biometric)"
         ),
         "category": "pii",
         "description": "BVN (Bank Verification Number) detected in source code.",
@@ -80,7 +82,8 @@ RULES = [
         "severity": "WARNING",
         # Only flag a Nigerian phone number when it is assigned to a phone/mobile/tel variable.
         # This avoids BVN overlap and reduces noise from 11-digit numbers in non-PII contexts.
-        "pattern": r"(?:phone|mobile|tel)[_\w]{0,20}\s*[:=]\s*['\"]?(?:\+?234|0)[789][01]\d{8}['\"]?",
+        # Trailing (?!\d) prevents matching the first 11 digits of a longer number.
+        "pattern": r"(?:phone|mobile|tel)\w{0,20}\s*[:=]\s*['\"]?(?:\+?234|0)[789][01]\d{8}(?!\d)",
         "category": "pii",
         "description": "Nigerian phone number assigned to a phone/mobile/tel variable in source code.",
         "remediation": "Ensure this is not real user data. Remove from code and test fixtures.",
@@ -229,6 +232,11 @@ def should_scan_file(filepath: str) -> bool:
 _INFRA_EXTENSIONS = {".tf", ".yml", ".yaml"}
 
 
+def _is_dockerfile(filename: str) -> bool:
+    base = os.path.basename(filename).lower()
+    return base.startswith("dockerfile") or base.endswith(".dockerfile")
+
+
 def scan_content(content: str, filename: str) -> List[Finding]:
     findings = []
     lines = content.splitlines()
@@ -236,6 +244,10 @@ def scan_content(content: str, filename: str) -> List[Finding]:
 
     for rule in RULES:
         if rule["category"] == "ndpa" and ext.lower() not in _INFRA_EXTENSIONS:
+            continue
+        # Container rules only make sense in Dockerfiles. Without this gate,
+        # every Python "from x import y" line matches the FROM regex.
+        if rule["category"] == "container" and not _is_dockerfile(filename):
             continue
 
         pattern = rule["_compiled"]
@@ -256,28 +268,35 @@ def scan_content(content: str, filename: str) -> List[Finding]:
     return findings
 
 
-def scan_path(path: str) -> ScanResult:
-    """Scan a file or directory. Returns a ScanResult."""
-    result = ScanResult()
+# Directories that are never scanned, at any depth.
+# .github is intentionally NOT skipped — pipeline YAML is a primary
+# supply-chain attack surface and must be scanned.
+SKIP_DIRS = {"node_modules", "__pycache__", ".git", ".venv", "venv"}
 
-    # Directories that are never scanned, regardless of name convention.
-    # .github is intentionally NOT in this set — pipeline YAML files are a
-    # primary attack surface for supply-chain issues and must be scanned.
-    _SKIP_DIRS = {"node_modules", "__pycache__", ".git", ".venv", "venv"}
+
+def scan_path(path: str, exclude: Optional[List[str]] = None) -> ScanResult:
+    """Scan a file or directory. Returns a ScanResult.
+
+    exclude: extra directory names to skip at any depth (e.g. ["tests"]).
+    Useful for excluding directories that intentionally contain synthetic
+    secrets, such as test fixtures and evaluation data.
+    """
+    result = ScanResult()
+    skip = SKIP_DIRS | set(exclude or [])
 
     if os.path.isfile(path):
         files = [path]
     else:
         files = []
         for root, dirs, filenames in os.walk(path):
-            root_parts = root.replace("\\", "/").split("/")
-            if any(
-                p in _SKIP_DIRS or (p.startswith(".") and p != ".github")
-                for p in root_parts
-            ):
-                # Also prune os.walk's descent into skipped dirs for efficiency
-                dirs[:] = []
-                continue
+            # Prune subdirectories in place so os.walk never descends into them.
+            # Filtering child names (rather than testing the full root path)
+            # means a scan target like "." or a parent dir with a leading dot
+            # is still scanned correctly.
+            dirs[:] = [
+                d for d in dirs
+                if d not in skip and (not d.startswith(".") or d == ".github")
+            ]
             for fname in filenames:
                 files.append(os.path.join(root, fname))
 
@@ -307,10 +326,48 @@ def scan_path(path: str) -> ScanResult:
 
 def save_report(result: ScanResult, output_path: str = "reports/scan_report.json"):
     """Save scan result to a JSON report."""
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    report_dir = os.path.dirname(output_path)
+    if report_dir:
+        os.makedirs(report_dir, exist_ok=True)
     with open(output_path, "w") as f:
         json.dump(result.to_dict(), f, indent=2)
     print(f"[INFO] Report saved to {output_path}")
+
+
+def append_history(result: ScanResult, target: str,
+                   history_path: str = "reports/scan_history.json"):
+    """Append a one-line summary of this scan to the history log.
+
+    The history file is a JSON list of summaries (not full findings), one entry
+    per scan, so results can be tracked over time. The scan target is recorded
+    because trends only make sense per target — mixing a scan of the project
+    with a scan of evaluation_data/vulnerable would look like a wild swing.
+    """
+    history_dir = os.path.dirname(history_path)
+    if history_dir:
+        os.makedirs(history_dir, exist_ok=True)
+
+    history = []
+    if os.path.exists(history_path):
+        try:
+            with open(history_path) as f:
+                history = json.load(f)
+        except (json.JSONDecodeError, IOError):
+            history = []
+
+    history.append({
+        "scanned_at": result.scanned_at,
+        "target": target,
+        "files_scanned": result.files_scanned,
+        "total_findings": result.total_findings,
+        "critical": result.critical,
+        "high": result.high,
+        "warning": result.warning,
+        "passed": result.passed,
+    })
+
+    with open(history_path, "w") as f:
+        json.dump(history, f, indent=2)
 
 
 # ─────────────────────────────────────────────
@@ -325,10 +382,17 @@ if __name__ == "__main__":
     parser.add_argument("path", help="File or directory to scan")
     parser.add_argument("--report", default="reports/scan_report.json", help="Output report path")
     parser.add_argument("--fail-on-warning", action="store_true", help="Also fail on WARNING findings")
+    parser.add_argument(
+        "--exclude",
+        default="",
+        help="Comma-separated directory names to skip, e.g. --exclude tests,evaluation_data "
+             "(for directories that intentionally contain synthetic secrets)",
+    )
     args = parser.parse_args()
+    exclude_dirs = [d.strip() for d in args.exclude.split(",") if d.strip()]
 
     print(f"\n🔍 Scanning: {args.path}\n{'─' * 50}")
-    result = scan_path(args.path)
+    result = scan_path(args.path, exclude=exclude_dirs)
 
     if args.fail_on_warning:
         result.passed = result.passed and result.warning == 0
@@ -346,6 +410,8 @@ if __name__ == "__main__":
     print(f"Status        : {'✅ PASSED' if result.passed else '❌ FAILED'}\n")
 
     save_report(result, args.report)
+    history_path = os.path.join(os.path.dirname(args.report) or ".", "scan_history.json")
+    append_history(result, target=args.path, history_path=history_path)
 
     # ── Explicit exit code enforcement ──────────────────────────
     # GitHub Actions reads the exit code of this script.

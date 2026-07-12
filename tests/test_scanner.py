@@ -3,7 +3,6 @@ Unit tests for the Nigerian Fintech Compliance Engine.
 Run with: pytest tests/ -v
 """
 
-import pytest
 import sys
 import os
 
@@ -91,6 +90,13 @@ class TestSecretDetection:
         findings = scan_content(content, "user.py")
         phone_findings = [f for f in findings if f.rule_id == "NG-SEC-005"]
         assert len(phone_findings) == 0
+
+    def test_twelve_digit_number_not_flagged_as_bvn(self):
+        # A BVN is exactly 11 digits — a 12-digit number near a keyword is not one
+        content = 'user_bvn = "225226831055"'
+        findings = scan_content(content, "user.py")
+        bvn_findings = [f for f in findings if f.rule_id == "NG-SEC-004"]
+        assert len(bvn_findings) == 0
 
     def test_clean_code_has_no_secret_findings(self):
         content = """
@@ -195,6 +201,14 @@ class TestContainerSecurity:
         cont_findings = [f for f in findings if f.category == "container"]
         assert len(cont_findings) == 0
 
+    def test_container_rules_not_applied_to_python_files(self):
+        # "from x import y" in Python must NOT match the Docker FROM regex —
+        # container rules only apply to Dockerfiles.
+        content = "from dataclasses import dataclass\nfrom os import path\n"
+        findings = scan_content(content, "models.py")
+        cont_findings = [f for f in findings if f.category == "container"]
+        assert len(cont_findings) == 0
+
 
 # ─── Scan Result / Pass-Fail Logic Tests ──────────────────────
 
@@ -228,6 +242,34 @@ region = "af-south-1"
             assert result.passed is True
         finally:
             os.unlink(tmpfile)
+
+    def test_scanning_relative_dot_path_works(self):
+        # Regression: scan_path(".") used to skip EVERYTHING because "." itself
+        # starts with a dot — making the CI scan a silent no-op that always passed.
+        import tempfile, os
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with open(os.path.join(tmpdir, "bad.tf"), "w") as f:
+                f.write('acl = "public-read"\n')
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                result = scan_path(".")
+            finally:
+                os.chdir(old_cwd)
+        assert result.files_scanned >= 1
+        assert result.critical > 0
+
+    def test_exclude_directories(self):
+        # Directories passed via exclude= must be skipped at any depth
+        import tempfile, os
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fixture_dir = os.path.join(tmpdir, "fixtures")
+            os.makedirs(fixture_dir)
+            with open(os.path.join(fixture_dir, "bad.tf"), "w") as f:
+                f.write('acl = "public-read"\n')
+            result = scan_path(tmpdir, exclude=["fixtures"])
+        assert result.total_findings == 0
+        assert result.passed is True
 
     def test_github_workflows_directory_is_scanned(self):
         # .github/workflows/ must NOT be skipped — pipeline YAML is a supply-chain
