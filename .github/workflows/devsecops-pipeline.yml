@@ -89,6 +89,41 @@ jobs:
           fi
           echo "Vulnerable corpus correctly failed the scan."
 
+      - name: Trivy IaC scan — vulnerable corpus (must be caught)
+        # Second detection engine over the same corpus: Trivy should flag the
+        # planted Terraform/Docker/K8s misconfigurations (open security
+        # groups, wildcard IAM, privileged pods, root users, ...).
+        # continue-on-error lets the next step assert on the outcome.
+        id: trivy_vulnerable
+        uses: aquasecurity/trivy-action@v0.36.0
+        continue-on-error: true
+        with:
+          scan-type: "config"
+          scan-ref: "evaluation_data/vulnerable"
+          format: "table"
+          exit-code: "1"
+          severity: "CRITICAL,HIGH"
+
+      - name: Verify Trivy caught the planted misconfigurations
+        run: |
+          if [ "${{ steps.trivy_vulnerable.outcome }}" != "failure" ]; then
+            echo "::error::Trivy found no CRITICAL/HIGH misconfigurations in the vulnerable corpus"
+            exit 1
+          fi
+          echo "Trivy correctly flagged the vulnerable corpus."
+
+      - name: Trivy IaC scan — clean corpus (informational)
+        # exit-code 0: shown in the log for comparison, never gates. The clean
+        # corpus is designed against OUR rules; Trivy has hundreds of extra
+        # best-practice checks it may still comment on.
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: "config"
+          scan-ref: "evaluation_data/clean"
+          format: "table"
+          exit-code: "0"
+          severity: "CRITICAL,HIGH"
+
       - name: Publish scan results to run summary
         if: always()
         run: |
@@ -219,6 +254,8 @@ jobs:
           exit-code: "1"
           severity: "CRITICAL,HIGH"
           ignore-unfixed: true
+          # Documented risk acceptances (see .trivyignore for justifications)
+          trivyignores: ".trivyignore"
 
       - name: Trivy IaC scan (Terraform)
         uses: aquasecurity/trivy-action@v0.36.0

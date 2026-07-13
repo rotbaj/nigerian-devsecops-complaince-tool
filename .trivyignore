@@ -1,0 +1,30 @@
+# Risk-accepted vulnerabilities — dashboard container image.
+#
+# Context: the image runs an internal compliance dashboard. It serves no
+# untrusted user content, processes no user-uploaded images, and does not
+# parse externally supplied Arrow/protobuf payloads. The fixed versions of
+# all packages below are incompatible with the pinned streamlit 1.32 stack
+# (streamlit requires pillow<11 and protobuf<5; pyarrow>15 breaks pandas
+# 2.2.0), so upgrading requires replatforming the dashboard.
+#
+# Review date: 2026-07-13. Re-assess when the streamlit stack is upgraded.
+
+# pillow 10.4.0 — out-of-bounds write via crafted PSD image. The dashboard
+# never opens image files; pillow is only a transitive streamlit dependency.
+CVE-2026-25990
+
+# pillow 10.4.0 — DoS via decompression bomb in FITS image processing.
+# No image processing path exists in this app.
+CVE-2026-40192
+
+# pillow 10.4.0 — arbitrary code execution via malicious PSD file.
+# No PSD (or any) image files are ever opened by this app.
+CVE-2026-42311
+
+# protobuf 4.25.9 — DoS via recursion depth bypass. Protobuf here only
+# serializes streamlit's own UI messages, never external input.
+CVE-2026-0994
+
+# pyarrow 15.0.0 — DoS via use-after-free. Arrow only carries the app's own
+# DataFrames between server and browser, never untrusted data.
+CVE-2026-25087
