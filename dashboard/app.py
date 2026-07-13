@@ -23,16 +23,15 @@ from compliance_engine.scanner import scan_path, save_report, append_history
 # ─── Page Config ───────────────────────────────────────────────
 st.set_page_config(
     page_title="Nigerian Fintech DevSecOps Dashboard",
-    page_icon="🛡️",
     layout="wide",
 )
 
 # ─── Sidebar ───────────────────────────────────────────────────
-st.sidebar.title("🛡️ DevSecOps Dashboard")
+st.sidebar.title("DevSecOps Dashboard")
 st.sidebar.markdown("**Nigerian Fintech Compliance Engine**")
 st.sidebar.markdown("---")
 
-mode = st.sidebar.radio("Mode", ["📂 Scan Directory", "📄 Load Report"])
+mode = st.sidebar.radio("Mode", ["Scan Directory", "Load Report"])
 fail_on_warning = st.sidebar.checkbox("Fail on WARNING", value=False)
 
 # Fix 2: Resolve report_path relative to THIS file, not the current working
@@ -50,7 +49,7 @@ def repo_relative(path):
     if os.path.isabs(p):
         rel = os.path.relpath(p, BASE_DIR)
         if rel.startswith(".."):
-            return p  # outside the repo — nothing shorter to show
+            return p  # outside the repo; nothing shorter to show
         p = rel
     p = os.path.normpath(p)
     return REPO_NAME if p == "." else p
@@ -119,14 +118,14 @@ def summarize_trivy(report):
     return counts, rows
 
 # ─── Header ────────────────────────────────────────────────────
-st.title("🛡️ Nigerian Fintech DevSecOps Compliance Dashboard")
+st.title("Nigerian Fintech DevSecOps Compliance Dashboard")
 st.caption("Automated security & NDPA 2023 compliance scanning for Nigerian Fintech CI/CD pipelines")
 st.markdown("---")
 
 # ─── Scan or Load ──────────────────────────────────────────────
 result_data = None
 
-if mode == "📂 Scan Directory":
+if mode == "Scan Directory":
     scan_target = st.text_input(
         "Enter path to scan:",
         value=".",
@@ -135,20 +134,20 @@ if mode == "📂 Scan Directory":
              "evaluation_data/vulnerable (100 bad files) or evaluation_data/clean "
              "(100 clean files). Excludes below never apply to the target itself.",
     )
-    # Same default excludes as the CI pipeline — tests/ and evaluation_data/
+    # Same default excludes as the CI pipeline: tests/ and evaluation_data/
     # intentionally contain synthetic secrets, so a scan of the PROJECT ROOT
     # would otherwise always report FAILED. These excludes only skip
     # subdirectories inside the target; scanning evaluation_data/ directly
     # as the target still works with this field untouched.
     exclude_input = st.text_input(
         "Exclude directories (comma-separated):",
-        value="tests,evaluation_data",
+        value="tests,evaluation_data,reports",
         help="Directory names skipped at any depth inside the scan target. "
              "Clear this field to scan everything.",
     )
     col1, col2 = st.columns([1, 4])
     with col1:
-        run_scan = st.button("🔍 Run Scan", type="primary")
+        run_scan = st.button("Run Scan", type="primary")
 
     if run_scan:
         # Relative paths are resolved against the project root, not the
@@ -160,7 +159,7 @@ if mode == "📂 Scan Directory":
         )
         display_target = repo_relative(resolved_target)
         # evaluation_data/ is git-ignored (synthetic secrets), so on a fresh
-        # clone — including the hosted Streamlit Cloud app — it doesn't exist
+        # clone (including the hosted Streamlit Cloud app) it doesn't exist
         # until generated. Generate it on demand when it's the scan target.
         if not os.path.exists(resolved_target) and display_target.split(os.sep)[0] == "evaluation_data":
             generator = os.path.join(BASE_DIR, "generate_eval_data.py")
@@ -172,7 +171,7 @@ if mode == "📂 Scan Directory":
                     )
         # Fix 2: Validate the path exists before trying to scan it
         if not os.path.exists(resolved_target):
-            st.error(f"❌ Path not found: `{display_target}`. Please enter a valid file or directory.")
+            st.error(f"Path not found: `{display_target}`. Please enter a valid file or directory.")
         else:
             exclude_dirs = [d.strip() for d in exclude_input.split(",") if d.strip()]
             try:
@@ -180,7 +179,7 @@ if mode == "📂 Scan Directory":
                     result = scan_path(resolved_target, exclude=exclude_dirs)
                     if fail_on_warning:
                         result.passed = result.passed and result.warning == 0
-                    # Fix 2: Ensure reports/ directory exists before writing —
+                    # Fix 2: Ensure reports/ directory exists before writing;
                     # prevents crash on a fresh clone where reports/ doesn't exist yet
                     os.makedirs(os.path.dirname(report_path), exist_ok=True)
                     save_report(result, report_path)
@@ -192,20 +191,20 @@ if mode == "📂 Scan Directory":
                     st.session_state["scan_result"] = result.to_dict()
                 st.success("Scan complete!")
             except Exception as e:
-                st.error(f"❌ Scan failed unexpectedly: {e}")
+                st.error(f"Scan failed unexpectedly: {e}")
 
     result_data = st.session_state.get("scan_result")
 
-elif mode == "📄 Load Report":
+elif mode == "Load Report":
     source = st.radio(
         "Report source:",
-        ["🌐 Latest CI results", "📤 Upload a file", "💾 Local report file"],
+        ["Latest CI results", "Upload a file", "Local report file"],
         horizontal=True,
         help="CI results come from the scan-results branch that the pipeline "
-             "publishes on every push — no terminal needed.",
+             "publishes on every push, no terminal needed.",
     )
 
-    if source == "🌐 Latest CI results":
+    if source == "Latest CI results":
         repo_slug = st.text_input(
             "GitHub repository (owner/name):",
             value=detect_github_repo(),
@@ -217,9 +216,9 @@ elif mode == "📄 Load Report":
             "Clean corpus (evaluation)": "clean_report.json",
         }
         which = st.selectbox("Which CI scan:", list(CI_REPORTS))
-        if st.button("🔄 Fetch latest CI results", type="primary"):
+        if st.button("Fetch latest CI results", type="primary"):
             if not repo_slug.strip():
-                st.error("❌ Enter the GitHub repository as owner/name.")
+                st.error("Enter the GitHub repository as owner/name.")
             else:
                 try:
                     st.session_state["ci_report"] = fetch_ci_json(
@@ -246,20 +245,20 @@ elif mode == "📄 Load Report":
                 except urllib.error.HTTPError as e:
                     if e.code == 404:
                         st.error(
-                            "❌ No published CI results found. The scan-results "
+                            "No published CI results found. The scan-results "
                             "branch is created by the pipeline's 'Publish Results' "
-                            "job — push a commit so the pipeline runs at least once, "
+                            "job. Push a commit so the pipeline runs at least once, "
                             "and make sure the repository is public."
                         )
                     else:
-                        st.error(f"❌ Could not fetch CI results: HTTP {e.code}")
+                        st.error(f"Could not fetch CI results: HTTP {e.code}")
                 except Exception as e:
-                    st.error(f"❌ Could not fetch CI results: {e}")
+                    st.error(f"Could not fetch CI results: {e}")
         result_data = st.session_state.get("ci_report")
         if result_data:
             st.info(f"Showing latest CI results: **{st.session_state.get('ci_report_name', '')}**")
 
-    elif source == "📤 Upload a file":
+    elif source == "Upload a file":
         # Report JSONs also come out of CI as downloadable artifacts, so accept
         # an uploaded file (e.g. clean_report.json / vulnerable_report.json from
         # the pipeline run's artifacts).
@@ -275,14 +274,14 @@ elif mode == "📄 Load Report":
                 result_data = json.load(uploaded)
                 st.info(f"Loaded uploaded report `{uploaded.name}`")
             except json.JSONDecodeError as e:
-                st.error(f"❌ Not a valid report file: {e}")
+                st.error(f"Not a valid report file: {e}")
 
-    # Fix 2: Always guard with os.path.exists() — prevents FileNotFoundError
+    # Fix 2: Always guard with os.path.exists(); prevents FileNotFoundError
     # crash on a fresh clone before any scan has been run.
     elif not os.path.exists(report_path):
         st.warning(
-            "⚠️ No scan report found at `reports/scan_report.json`.\n\n"
-            "Run a scan first using **📂 Scan Directory** mode above, or via CLI:\n"
+            "No scan report found at `reports/scan_report.json`.\n\n"
+            "Run a scan first using **Scan Directory** mode above, or via CLI:\n"
             "```bash\npython compliance_engine/scanner.py .\n```"
         )
     else:
@@ -291,7 +290,7 @@ elif mode == "📄 Load Report":
                 result_data = json.load(f)
             st.info(f"Loaded report from `{repo_relative(report_path)}`")
         except (json.JSONDecodeError, IOError) as e:
-            st.error(f"❌ Could not read report file: {e}")
+            st.error(f"Could not read report file: {e}")
 
 # ─── Results ───────────────────────────────────────────────────
 if result_data:
@@ -300,12 +299,12 @@ if result_data:
     # ── Status Banner ──
     passed = result_data.get("passed", False)
     if passed:
-        st.success("## ✅ BUILD PASSED — No critical or high severity issues found.")
+        st.success("## BUILD PASSED: no critical or high severity issues found.")
         st.caption(
             "This code meets the security and NDPA compliance checks and is safe to release."
         )
     else:
-        st.error("## ❌ BUILD FAILED — Critical or high severity issues require remediation before merge.")
+        st.error("## BUILD FAILED: critical or high severity issues require remediation before merge.")
         st.caption(
             "In plain terms: this code contains issues that could expose customer data or "
             "payment credentials, or breach NDPA 2023 obligations. The release is blocked "
@@ -325,7 +324,7 @@ if result_data:
 # direction of travel first, then drill into individual files if needed.
 # Each scan appends one summary row to reports/scan_history.json.
 st.markdown("---")
-st.subheader("📈 Compliance Trend")
+st.subheader("Compliance Trend")
 
 history = []
 if os.path.exists(history_path):
@@ -336,17 +335,17 @@ if os.path.exists(history_path):
         history = []
 
 # When CI results have been fetched, the pipeline's accumulated history is
-# available too — usually the one stakeholders care about.
+# available too, usually the one stakeholders care about.
 ci_history = st.session_state.get("ci_history")
 if ci_history:
     hist_source = st.radio(
         "History source:",
-        ["☁️ CI pipeline", "💻 This computer"],
+        ["CI pipeline", "This computer"],
         horizontal=True,
         help="CI pipeline shows every scan run by GitHub Actions; "
              "This computer shows scans run from this machine.",
     )
-    if hist_source == "☁️ CI pipeline":
+    if hist_source == "CI pipeline":
         history = ci_history
 
 if not history:
@@ -362,7 +361,7 @@ else:
     # so equivalent targets merge and the selector stays readable.
     hist_df["target"] = hist_df["target"].map(repo_relative)
 
-    # Trends only make sense per scan target — a scan of the test corpus and a
+    # Trends only make sense per scan target; a scan of the test corpus and a
     # scan of the real project would otherwise look like a huge spike.
     targets = list(dict.fromkeys(hist_df["target"]))
     default_ix = targets.index(hist_df.iloc[-1]["target"])
@@ -384,7 +383,7 @@ else:
         col.metric(label, int(latest[key]), delta=delta, delta_color="inverse")
     if prev is not None:
         st.caption(
-            "Change shown against the previous scan of this target — "
+            "Change shown against the previous scan of this target; "
             "green means fewer issues than last time."
         )
 
@@ -450,9 +449,9 @@ else:
     else:
         st.caption("Run this target again later to see the trend line between scans.")
 
-    with st.expander("📋 View full scan log"):
+    with st.expander("View full scan log"):
         log_df = tdf.copy()
-        log_df["Result"] = log_df["passed"].map({True: "✅ Passed", False: "❌ Failed"})
+        log_df["Result"] = log_df["passed"].map({True: "Passed", False: "Failed"})
         log_df = log_df.rename(columns={
             "scanned_at": "Date & time (UTC)",
             "files_scanned": "Files checked",
@@ -469,10 +468,10 @@ if result_data:
 
     if not findings:
         st.balloons()
-        st.success("🎉 No findings detected. Your code is clean!")
+        st.success("No findings detected. Your code is clean!")
     else:
         # ── Filters ──
-        st.subheader("🔎 Filter Findings")
+        st.subheader("Filter Findings")
         col_sev, col_cat, col_sort = st.columns(3)
         all_severities = ["CRITICAL", "HIGH", "WARNING"]
         all_categories = sorted(set(f["category"] for f in findings))
@@ -497,14 +496,14 @@ if result_data:
         # "Scan order" keeps the original order from the report
 
         # ── Findings Table ──
-        st.subheader(f"📋 Findings ({len(filtered)} shown)")
-        SEVERITY_ICON = {"CRITICAL": "🔴", "HIGH": "🟠", "WARNING": "🟡"}
+        st.subheader(f"Findings ({len(filtered)} shown)")
 
+        SEVERITY_ICON = {"CRITICAL": "🔴", "HIGH": "🟠", "WARNING": "🟡"}
         for finding in filtered:
-            icon = SEVERITY_ICON.get(finding["severity"], "⚪")
+            icon = SEVERITY_ICON.get(finding["severity"], "")
             shown_file = repo_relative(finding["filename"])
             with st.expander(
-                f"{icon} [{finding['severity']}] {finding['rule_id']} — {finding['name']} | `{shown_file}:{finding['line_number']}`"
+                f"{icon} [{finding['severity']}] {finding['rule_id']}: {finding['name']} | `{shown_file}:{finding['line_number']}`"
             ):
                 c1, c2 = st.columns(2)
                 with c1:
@@ -514,11 +513,11 @@ if result_data:
                     st.code(finding["line_content"], language="text")
                 with c2:
                     st.markdown(f"**Description:**\n{finding['description']}")
-                    st.info(f"🔧 **Remediation:** {finding['remediation']}")
+                    st.info(f"**Remediation:** {finding['remediation']}")
 
         # ── Findings by Category ──
         st.markdown("---")
-        st.subheader("📊 Findings by Category")
+        st.subheader("Findings by Category")
         CATEGORY_LABELS = {
             "secret": "Hardcoded secrets",
             "pii": "Personal data (PII)",
@@ -562,13 +561,13 @@ if ci_trivy:
             "The application container, checked against the global vulnerability "
             "database. Anything listed here is a known, published weakness.",
         "Vulnerable corpus (infrastructure)":
-            "Deliberately insecure test files — findings here are EXPECTED and "
+            "Deliberately insecure test files: findings here are EXPECTED and "
             "prove the pipeline catches cloud misconfigurations.",
         "Clean corpus (infrastructure)":
-            "Well-configured test files — this list should be empty.",
+            "Well-configured test files: this list should be empty.",
     }
     st.markdown("---")
-    st.subheader("🐳 Infrastructure & Container Scan (Trivy)")
+    st.subheader("Infrastructure & Container Scan (Trivy)")
     st.caption(
         "Results from Trivy, the pipeline's second scanner: it checks the Docker "
         "image for known vulnerabilities (CVEs) and infrastructure files for "
@@ -589,4 +588,4 @@ if ci_trivy:
                     hide_index=True,
                 )
             else:
-                st.success("✅ No issues found in this scan.")
+                st.success("No issues found in this scan.")

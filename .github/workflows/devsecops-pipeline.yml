@@ -12,7 +12,7 @@ jobs:
   # Stage 1: Secret & NDPA Compliance Scan
   # ──────────────────────────────────────────
   compliance-scan:
-    name: 🔍 Compliance & Secret Scan
+    name: Compliance & Secret Scan
     runs-on: ubuntu-latest
 
     steps:
@@ -32,7 +32,7 @@ jobs:
         # for testing the scanner itself, so they are excluded here.
         # Exit code 1 = CRITICAL or HIGH findings → pipeline fails and blocks merge
         run: |
-          python compliance_engine/scanner.py . --exclude tests,evaluation_data --report reports/scan_report.json
+          python compliance_engine/scanner.py . --exclude tests,evaluation_data,reports --report reports/scan_report.json
 
       - name: Upload Compliance Report
         uses: actions/upload-artifact@v4
@@ -52,7 +52,7 @@ jobs:
   # (Load Report mode → upload the downloaded file).
   # ──────────────────────────────────────────
   evaluation:
-    name: 🎯 Evaluation Corpus Scan
+    name: Evaluation Corpus Scan
     runs-on: ubuntu-latest
     needs: compliance-scan
 
@@ -79,17 +79,17 @@ jobs:
             --fail-on-warning --report reports/clean_report.json
 
       - name: Scan vulnerable corpus (scanner must catch it)
-        # Exit code 1 is the CORRECT outcome here — it means the scanner
+        # Exit code 1 is the CORRECT outcome here: it means the scanner
         # detected the planted issues. The step fails only if the scan PASSES.
         run: |
           if python compliance_engine/scanner.py evaluation_data/vulnerable \
               --report reports/vulnerable_report.json; then
-            echo "::error::Vulnerable corpus passed the scan — detection is broken"
+            echo "::error::Vulnerable corpus passed the scan; detection is broken"
             exit 1
           fi
           echo "Vulnerable corpus correctly failed the scan."
 
-      - name: Trivy IaC scan — vulnerable corpus (must be caught)
+      - name: Trivy IaC scan of vulnerable corpus (must be caught)
         # Second detection engine over the same corpus: Trivy should flag the
         # planted Terraform/Docker/K8s misconfigurations (open security
         # groups, wildcard IAM, privileged pods, root users, ...).
@@ -113,7 +113,7 @@ jobs:
           fi
           echo "Trivy correctly flagged the vulnerable corpus."
 
-      - name: Trivy IaC scan — clean corpus (informational)
+      - name: Trivy IaC scan of clean corpus (informational)
         # exit-code 0: shown in the log for comparison, never gates. The clean
         # corpus is designed against OUR rules; Trivy has hundreds of extra
         # best-practice checks it may still comment on.
@@ -145,11 +145,11 @@ jobs:
               print(f"| Files scanned | {r['files_scanned']} |")
               print(f"| Files with findings | {detected} |")
               print(f"| Total findings | {r['total_findings']} |")
-              print(f"| Critical / High / Warning | {r['critical']} / {r['high']} / {r['warning']} |")
+              print(f"| 🔴 Critical / 🟠 High / 🟡 Warning | {r['critical']} / {r['high']} / {r['warning']} |")
               if expect_findings:
-                  print(f"| Detection rate | {'✅' if ok else '❌'} {detected}/100 vulnerable files caught |")
+                  print(f"| Detection rate | {'PASS' if ok else 'FAIL'}: {detected}/100 vulnerable files caught |")
               else:
-                  print(f"| False positives | {'✅ none' if ok else f'❌ {detected} clean files flagged'} |")
+                  print(f"| False positives | {'none' if ok else f'{detected} clean files flagged'} |")
               print()
 
           def trivy_section(title, path, expect_findings):
@@ -166,20 +166,20 @@ jobs:
               print("| Metric | Value |")
               print("|--------|-------|")
               print(f"| Misconfigurations found | {total} |")
-              print(f"| Critical / High | {counts.get('CRITICAL', 0)} / {counts.get('HIGH', 0)} |")
+              print(f"| 🔴 Critical / 🟠 High | {counts.get('CRITICAL', 0)} / {counts.get('HIGH', 0)} |")
               if expect_findings:
-                  print(f"| Detection | {'✅ planted misconfigs caught' if total else '❌ nothing caught'} |")
+                  print(f"| Detection | {'planted misconfigs caught' if total else 'nothing caught'} |")
               else:
-                  print(f"| False positives | {'✅ none' if total == 0 else f'❌ {total} flagged'} |")
+                  print(f"| False positives | {'none' if total == 0 else f'{total} flagged'} |")
               print()
 
-          section("🟢 Clean corpus (100 files — expected: no findings)",
+          section("Clean corpus (100 files, expected: no findings)",
                   "reports/clean_report.json", expect_findings=False)
-          section("🔴 Vulnerable corpus (100 files — expected: all caught)",
+          section("Vulnerable corpus (100 files, expected: all caught)",
                   "reports/vulnerable_report.json", expect_findings=True)
-          trivy_section("🐳 Trivy IaC — vulnerable corpus (expected: misconfigs caught)",
+          trivy_section("Trivy IaC scan of vulnerable corpus (expected: misconfigs caught)",
                         "reports/trivy_vulnerable.json", expect_findings=True)
-          trivy_section("🐳 Trivy IaC — clean corpus (expected: no misconfigs)",
+          trivy_section("Trivy IaC scan of clean corpus (expected: no misconfigs)",
                         "reports/trivy_clean.json", expect_findings=False)
           print("To inspect either scan in the dashboard: download the "
                 "`evaluation-reports` artifact below, unzip it, then run the "
@@ -206,10 +206,10 @@ jobs:
   # results without touching the pipeline.
   # ──────────────────────────────────────────
   publish-results:
-    name: 📤 Publish Results for Dashboard
+    name: Publish Results for Dashboard
     runs-on: ubuntu-latest
     needs: [compliance-scan, evaluation, container-scan]
-    # Runs even when a scan failed — failed scans are exactly what the
+    # Runs even when a scan failed, because failed scans are exactly what the
     # dashboard needs to show. Skipped on PRs (no write access from forks).
     if: ${{ always() && github.event_name != 'pull_request' }}
     permissions:
@@ -265,7 +265,7 @@ jobs:
   # Stage 2: Container Security Scan (Trivy)
   # ──────────────────────────────────────────
   container-scan:
-    name: 🐳 Container Security Scan
+    name: Container Security Scan
     runs-on: ubuntu-latest
     needs: compliance-scan
 
@@ -312,7 +312,7 @@ jobs:
   # Stage 3: Unit Tests
   # ──────────────────────────────────────────
   test:
-    name: 🧪 Run Tests
+    name: Run Tests
     runs-on: ubuntu-latest
     needs: compliance-scan
 
@@ -340,7 +340,7 @@ jobs:
   # Stage 4: Build Summary
   # ──────────────────────────────────────────
   summary:
-    name: 📋 Pipeline Summary
+    name: Pipeline Summary
     runs-on: ubuntu-latest
     needs: [compliance-scan, evaluation, container-scan, test]
     if: always()
@@ -366,5 +366,5 @@ jobs:
           print(f'| Critical | {r[\"critical\"]} |')
           print(f'| High | {r[\"high\"]} |')
           print(f'| Warnings | {r[\"warning\"]} |')
-          print(f'| Status | {\"✅ PASSED\" if r[\"passed\"] else \"❌ FAILED\"} |')
+          print(f'| Status | {\"PASSED\" if r[\"passed\"] else \"FAILED\"} |')
           " >> $GITHUB_STEP_SUMMARY

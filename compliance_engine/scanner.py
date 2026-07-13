@@ -41,7 +41,7 @@ RULES = [
         "id": "NG-SEC-003",
         "name": "Paystack Public Key",
         "severity": "WARNING",
-        # Covers both test (pk_test_) and live (pk_live_) public keys — 40 hex chars each
+        # Covers both test (pk_test_) and live (pk_live_) public keys, 40 hex chars each
         "pattern": r"pk_test_[a-fA-F0-9]{40}|pk_live_[a-fA-F0-9]{40}",
         "category": "secret",
         "description": "Paystack public key hardcoded in source code. Avoid committing any key, even public ones.",
@@ -63,7 +63,7 @@ RULES = [
         "severity": "CRITICAL",
         # Only flag 11-digit numbers that appear within ~40 chars of a BVN keyword.
         # This prevents false positives on phone numbers, amounts, and timestamps.
-        # (?<![0-9]) / (?![0-9]) ensure exactly 11 digits — a 12-digit number is not a BVN.
+        # (?<![0-9]) / (?![0-9]) ensure exactly 11 digits; a 12-digit number is not a BVN.
         # (Examples use "…" so this file doesn't flag its own documentation.)
         # Matches: user_bvn = "22522683…"  (keyword before the number)
         # Matches: "22522683…"  # bank_verification_number  (keyword after)
@@ -269,7 +269,7 @@ def scan_content(content: str, filename: str) -> List[Finding]:
 
 
 # Directories that are never scanned, at any depth.
-# .github is intentionally NOT skipped — pipeline YAML is a primary
+# .github is intentionally NOT skipped: pipeline YAML is a primary
 # supply-chain attack surface and must be scanned.
 SKIP_DIRS = {"node_modules", "__pycache__", ".git", ".venv", "venv"}
 
@@ -340,7 +340,7 @@ def append_history(result: ScanResult, target: str,
 
     The history file is a JSON list of summaries (not full findings), one entry
     per scan, so results can be tracked over time. The scan target is recorded
-    because trends only make sense per target — mixing a scan of the project
+    because trends only make sense per target; mixing a scan of the project
     with a scan of evaluation_data/vulnerable would look like a wild swing.
     """
     history_dir = os.path.dirname(history_path)
@@ -391,7 +391,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     exclude_dirs = [d.strip() for d in args.exclude.split(",") if d.strip()]
 
-    print(f"\n🔍 Scanning: {args.path}\n{'─' * 50}")
+    print(f"\nScanning: {args.path}\n{'─' * 50}")
     result = scan_path(args.path, exclude=exclude_dirs)
 
     if args.fail_on_warning:
@@ -399,7 +399,7 @@ if __name__ == "__main__":
 
     # Print summary
     for finding in result.findings:
-        icon = {"CRITICAL": "🔴", "HIGH": "🟠", "WARNING": "🟡"}.get(finding.severity, "⚪")
+        icon = {"CRITICAL": "🔴", "HIGH": "🟠", "WARNING": "🟡"}.get(finding.severity, "")
         print(f"{icon} [{finding.severity}] {finding.rule_id} | {finding.filename}:{finding.line_number}")
         print(f"   ↳ {finding.name}")
         print(f"   ↳ {finding.line_content}\n")
@@ -407,7 +407,7 @@ if __name__ == "__main__":
     print(f"{'─' * 50}")
     print(f"Files scanned : {result.files_scanned}")
     print(f"Total findings: {result.total_findings} (🔴 {result.critical} critical | 🟠 {result.high} high | 🟡 {result.warning} warnings)")
-    print(f"Status        : {'✅ PASSED' if result.passed else '❌ FAILED'}\n")
+    print(f"Status        : {'PASSED' if result.passed else 'FAILED'}\n")
 
     save_report(result, args.report)
     history_path = os.path.join(os.path.dirname(args.report) or ".", "scan_history.json")
@@ -417,7 +417,7 @@ if __name__ == "__main__":
     # GitHub Actions reads the exit code of this script.
     # Exit 0 = green checkmark (build passes).
     # Exit 1 = red X (build fails, merge is blocked).
-    # We MUST be explicit here — relying on result.passed alone is not
+    # We MUST be explicit here: relying on result.passed alone is not
     # sufficient because unhandled exceptions would exit 0 and silently pass.
     if result.critical > 0 or result.high > 0:
         sys.exit(1)

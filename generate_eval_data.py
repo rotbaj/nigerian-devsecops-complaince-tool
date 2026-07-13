@@ -26,7 +26,7 @@ BAD_DIR = os.path.join(EVAL_DIR, "vulnerable")
 GOOD_DIR = os.path.join(EVAL_DIR, "clean")
 FIXTURES_DIR = os.path.join("tests", "fixtures")
 
-# Start from empty output dirs — filenames vary between runs (random extensions),
+# Start from empty output dirs: filenames vary between runs (random extensions),
 # so stale files from a previous run would otherwise accumulate and skew counts.
 for d in (BAD_DIR, GOOD_DIR):
     shutil.rmtree(d, ignore_errors=True)
@@ -77,7 +77,7 @@ class PaymentGatewayConfig:
 
 def process_kyc(user_payload):
     \"\"\"Process KYC data for new customers.\"\"\"
-    user_bvn = "{bvn}"  # Extracted from payload — bank_verification_number
+    user_bvn = "{bvn}"  # Extracted from payload, bank_verification_number
     logger.info(f"Processing KYC for user with BVN: {{user_bvn}}")
     return True
 """
@@ -180,7 +180,7 @@ WORKDIR /usr/src/app
 ADD package*.json ./
 RUN npm install
 
-# Trivy: curl piped straight into a shell — unverified remote code execution
+# Trivy: curl piped straight into a shell: unverified remote code execution
 RUN curl -sSL https://get.example-tool.io/install.sh | sh
 
 # Trivy: world-writable permissions on the app directory
@@ -245,12 +245,12 @@ spec:
               value: "us-east-1"
           ports:
             - containerPort: 8080
-          # Trivy: no resources.limits — a runaway pod can starve the node
+          # Trivy: no resources.limits, so a runaway pod can starve the node
 """
 
 
 # ─────────────────────────────────────────────────────────
-#  CLEAN TEMPLATES (no CRITICAL/HIGH — build must pass)
+#  CLEAN TEMPLATES (no CRITICAL/HIGH; build must pass)
 # ─────────────────────────────────────────────────────────
 
 # Variable renamed to customer_contact (not phone/mobile/tel) so an 11-digit
@@ -262,7 +262,7 @@ from pydantic import BaseSettings
 
 
 class Settings(BaseSettings):
-    # Secrets securely loaded from environment — never hardcoded
+    # Secrets securely loaded from environment, never hardcoded
     PAYSTACK_SECRET_KEY: str = os.getenv("PAYSTACK_SECRET_KEY", "")
     FLUTTERWAVE_SECRET_KEY: str = os.getenv("FLW_SECRET_KEY", "")
 
@@ -274,7 +274,7 @@ settings = Settings()
 
 
 def notify_user(user_id: str):
-    # 11-digit number with no BVN keyword context — must NOT trigger NG-SEC-004
+    # 11-digit number with no BVN keyword context; must NOT trigger NG-SEC-004
     customer_contact = "{contact}"
     print(f"Sending SMS to {{customer_contact}}")
 """
@@ -332,7 +332,7 @@ resource "aws_ebs_volume" "database_storage" {
 """
 
 CLEAN_DOCKER = """\
-# Pinned to a specific minor version — reproducible and auditable
+# Pinned to a specific minor version: reproducible and auditable
 FROM python:3.9.18-slim-bullseye
 
 RUN groupadd -r fintech_group && useradd -r -g fintech_group fintech_user
@@ -344,7 +344,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 RUN chown -R fintech_user:fintech_group /app
 
-# Secrets injected at runtime via secrets manager — never baked into the image
+# Secrets injected at runtime via secrets manager, never baked into the image
 ARG APP_VERSION
 ENV VERSION=$APP_VERSION
 
@@ -356,14 +356,14 @@ CMD ["gunicorn", "--bind", "0.0.0.0:8000", "core.wsgi:application"]
 
 
 # ─────────────────────────────────────────────────────────
-#  FIXTURE FILES (deterministic — used by the test suite)
+#  FIXTURE FILES (deterministic; used by the test suite)
 #
 #  These use fixed, non-random values so pytest results are
 #  stable across every run without needing a random seed.
 #
 #  The values are assembled from pieces so that THIS generator
 #  file never contains a scannable secret on a single source
-#  line — otherwise the scanner would flag its own tooling.
+#  line; otherwise the scanner would flag its own tooling.
 # ─────────────────────────────────────────────────────────
 
 _HEX40 = "a1b2c3d4e5" * 4          # 40 deterministic hex chars
@@ -372,7 +372,7 @@ _BVN = "225" + "2268" + "3105"     # 11 digits, split to avoid self-flagging
 _PHONE = "+234" + "80123" + "45678"
 
 FIXTURE_BAD_PYTHON = """\
-# Synthetic bad code — all credentials are non-functional.
+# Synthetic bad code; all credentials are non-functional.
 # DO NOT use any values from this file in a real project.
 
 import os
@@ -384,13 +384,13 @@ class InsecurePaymentConfig:
     flw_public = "FLWPUBK-{hex32}-X"
 
 def onboard_customer(payload):
-    user_bvn = "{bvn}"  # bank_verification_number — synthetic, non-real
+    user_bvn = "{bvn}"  # bank_verification_number (synthetic, non-real)
     mobile_number = "{phone}"
     return {{"bvn": user_bvn, "mobile": mobile_number}}
 """.format(hex40=_HEX40, hex32=_HEX32, bvn=_BVN, phone=_PHONE)
 
 FIXTURE_BAD_TERRAFORM = """\
-# Synthetic bad Terraform — intentionally violates NDPA 2023 and security rules.
+# Synthetic bad Terraform; intentionally violates NDPA 2023 and security rules.
 # DO NOT apply this to any real infrastructure.
 
 terraform {

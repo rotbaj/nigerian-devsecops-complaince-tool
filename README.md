@@ -59,7 +59,7 @@ none of the clean ones. All planted credentials are fake and non-functional.
 A note on the `--exclude` flag: the synthetic vulnerable files live inside this
 repository, so scanning the repository root without excludes will always report a
 failure caused by the planted test data rather than the actual source code. When
-scanning the project itself, pass `--exclude tests,evaluation_data`. When evaluating
+scanning the project itself, pass `--exclude tests,evaluation_data,reports`. When evaluating
 detection, scan `evaluation_data/vulnerable` directly; excludes apply only to
 subfolders of the scan target, never to the target itself.
 
@@ -94,7 +94,7 @@ Expected result: PASSED, 0 findings, exit code 0.
 
 5. Scan the project's own source code:
 ```bash
-python compliance_engine/scanner.py . --exclude tests,evaluation_data
+python compliance_engine/scanner.py . --exclude tests,evaluation_data,reports
 ```
 Expected result: PASSED. This is the same command the CI pipeline runs on every push.
 
@@ -123,10 +123,10 @@ Then open http://localhost:8501 in the browser:
 python compliance_engine/scanner.py path/to/file.py
 
 # Treat WARNINGs as failures too (stricter mode)
-python compliance_engine/scanner.py . --exclude tests,evaluation_data --fail-on-warning
+python compliance_engine/scanner.py . --exclude tests,evaluation_data,reports --fail-on-warning
 
 # Write the JSON report somewhere else
-python compliance_engine/scanner.py . --exclude tests,evaluation_data --report my_report.json
+python compliance_engine/scanner.py . --exclude tests,evaluation_data,reports --report my_report.json
 ```
 
 ### Run with Docker
@@ -135,7 +135,7 @@ python compliance_engine/scanner.py . --exclude tests,evaluation_data --report m
 docker build -t nigerian-devsecops .
 
 # Run the scanner inside the container against your mounted code
-docker run --rm -v $(pwd):/app nigerian-devsecops python compliance_engine/scanner.py /app --exclude tests,evaluation_data
+docker run --rm -v $(pwd):/app nigerian-devsecops python compliance_engine/scanner.py /app --exclude tests,evaluation_data,reports
 
 # Run the dashboard in the container
 docker run -p 8501:8501 nigerian-devsecops
@@ -162,8 +162,8 @@ docker run -p 8501:8501 nigerian-devsecops
 | NG-CONT-003 | WARNING  | container | Unpinned Docker image (:latest or missing tag)       |
 
 **Scoping to prevent false positives:**
-- `ndpa` rules apply only to infrastructure files (`.tf`, `.yml`, `.yaml`) — a code comment mentioning `us-east-1` won't fail the build.
-- `container` rules apply only to Dockerfiles — a Python `from x import y` won't match the `FROM` rule.
+- `ndpa` rules apply only to infrastructure files (`.tf`, `.yml`, `.yaml`), so a code comment mentioning `us-east-1` won't fail the build.
+- `container` rules apply only to Dockerfiles, so a Python `from x import y` won't match the `FROM` rule.
 - BVN/phone rules require keyword context, so arbitrary 11-digit numbers aren't flagged.
 
 **Pass/Fail:** The build fails (exit code 1) on any CRITICAL or HIGH finding.
@@ -183,7 +183,7 @@ sh scripts/install-hooks.sh
 From then on, `git commit` runs the compliance scan first and blocks the
 commit if CRITICAL or HIGH findings exist. The hook prints the findings in
 the terminal; to inspect them visually, run the dashboard. In an emergency
-a commit can bypass the hook with `git commit --no-verify` — the CI
+a commit can bypass the hook with `git commit --no-verify`; the CI
 pipeline will still catch it on push.
 
 ---
@@ -216,7 +216,7 @@ Stage 4:  Summary Report    ← Posted to GitHub Actions summary
   for the repository scan and both evaluation scans.
 - **In the dashboard:** the pipeline pushes every run's reports and the
   accumulated scan history to the `scan-results` branch. In the dashboard,
-  open **Load Report → Latest CI results** and click Fetch — no artifact
+  open **Load Report → Latest CI results** and click Fetch; no artifact
   downloads needed. The Compliance Trend chart can then plot the pipeline's
   full history.
 - **As artifacts:** each run also uploads `compliance-report` and
@@ -233,19 +233,19 @@ non-technical stakeholders open a URL instead of a terminal:
 3. Click **Create app**, pick this repository, branch `main`, and set the
    main file path to `dashboard/app.py`. Deploy.
 4. Share the app URL. Viewers use **Load Report → Latest CI results**,
-   which reads the `scan-results` branch — the page always reflects the
+   which reads the `scan-results` branch, so the page always reflects the
    most recent pipeline run.
 
 ---
 
 ## Tech Stack
 
-- **Python 3.12** — Compliance engine
-- **GitHub Actions** — CI/CD orchestration
-- **Docker** — Containerisation
-- **Trivy** — CVE & IaC scanning
-- **Streamlit** — Compliance dashboard
-- **pytest** — Unit testing
+- **Python 3.12**: Compliance engine
+- **GitHub Actions**: CI/CD orchestration
+- **Docker**: Containerisation
+- **Trivy**: CVE & IaC scanning
+- **Streamlit**: Compliance dashboard
+- **pytest**: Unit testing
 
 ---
 
@@ -257,4 +257,4 @@ All credentials, BVNs, phone numbers, and API keys in `tests/fixtures/` and `eva
 
 ## Supervisor
 
-Dr. Bolaji Abigail Omodunbi — Miva Open University
+Dr. Bolaji Abigail Omodunbi, Miva Open University

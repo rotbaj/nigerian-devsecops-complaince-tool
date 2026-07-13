@@ -1,7 +1,7 @@
-# Scan output — may contain redacted but sensitive path info
+# Scan output: may contain redacted but sensitive path info
 reports/
 
-# Generated synthetic data (contains fake secrets — regenerate with generate_eval_data.py)
+# Generated synthetic data (contains fake secrets; regenerate with generate_eval_data.py)
 evaluation_data/
 tests/fixtures/
 
@@ -15,7 +15,7 @@ dist/
 build/
 .eggs/
 
-# Environment & secrets — never commit
+# Environment & secrets: never commit
 .env
 .env.*
 *.local

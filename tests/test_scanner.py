@@ -71,7 +71,7 @@ class TestSecretDetection:
         assert "NG-SEC-004" in rule_ids
 
     def test_phone_number_without_bvn_keyword_not_flagged_as_bvn(self):
-        # A Nigerian phone number must NOT trigger the BVN rule — no keyword context
+        # A Nigerian phone number must NOT trigger the BVN rule (no keyword context)
         content = 'phone_number = "08012345678"'
         findings = scan_content(content, "user.py")
         bvn_findings = [f for f in findings if f.rule_id == "NG-SEC-004"]
@@ -92,7 +92,7 @@ class TestSecretDetection:
         assert len(phone_findings) == 0
 
     def test_twelve_digit_number_not_flagged_as_bvn(self):
-        # A BVN is exactly 11 digits — a 12-digit number near a keyword is not one
+        # A BVN is exactly 11 digits; a 12-digit number near a keyword is not one
         content = 'user_bvn = "225226831055"'
         findings = scan_content(content, "user.py")
         bvn_findings = [f for f in findings if f.rule_id == "NG-SEC-004"]
@@ -146,7 +146,7 @@ class TestNDPACompliance:
     def test_ndpa_rules_not_applied_to_python_files(self):
         # A comment in a .py file mentioning us-east-1 must NOT fail the build.
         # NDPA sovereignty rules are infrastructure-file-only to prevent false positives.
-        content = '# We migrated away from us-east-1 last year — do not use'
+        content = '# We migrated away from us-east-1 last year, do not use'
         findings = scan_content(content, "README_migration.py")
         ndpa_findings = [f for f in findings if f.category == "ndpa"]
         assert len(ndpa_findings) == 0
@@ -182,7 +182,7 @@ class TestContainerSecurity:
         assert "NG-CONT-003" in rule_ids
 
     def test_detects_untagged_docker_image(self):
-        # "FROM python" with no tag defaults to :latest — must be flagged
+        # "FROM python" with no tag defaults to :latest and must be flagged
         content = "FROM python\n"
         findings = scan_content(content, "Dockerfile")
         rule_ids = [f.rule_id for f in findings]
@@ -195,14 +195,14 @@ class TestContainerSecurity:
         assert len(container_findings) == 0
 
     def test_pinned_digest_no_warning(self):
-        # An image pinned by sha256 digest is fully reproducible — no warning
+        # An image pinned by sha256 digest is fully reproducible, so no warning
         content = "FROM node@sha256:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2\n"
         findings = scan_content(content, "Dockerfile")
         cont_findings = [f for f in findings if f.category == "container"]
         assert len(cont_findings) == 0
 
     def test_container_rules_not_applied_to_python_files(self):
-        # "from x import y" in Python must NOT match the Docker FROM regex —
+        # "from x import y" in Python must NOT match the Docker FROM regex;
         # container rules only apply to Dockerfiles.
         content = "from dataclasses import dataclass\nfrom os import path\n"
         findings = scan_content(content, "models.py")
@@ -245,7 +245,7 @@ region = "af-south-1"
 
     def test_scanning_relative_dot_path_works(self):
         # Regression: scan_path(".") used to skip EVERYTHING because "." itself
-        # starts with a dot — making the CI scan a silent no-op that always passed.
+        # starts with a dot, making the CI scan a silent no-op that always passed.
         import tempfile, os
         with tempfile.TemporaryDirectory() as tmpdir:
             with open(os.path.join(tmpdir, "bad.tf"), "w") as f:
@@ -272,7 +272,7 @@ region = "af-south-1"
         assert result.passed is True
 
     def test_github_workflows_directory_is_scanned(self):
-        # .github/workflows/ must NOT be skipped — pipeline YAML is a supply-chain
+        # .github/workflows/ must NOT be skipped: pipeline YAML is a supply-chain
         # attack surface. Secrets or unpinned actions there must be caught.
         import tempfile, os
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -290,6 +290,6 @@ region = "af-south-1"
         # Use a valid 40-hex-char Paystack key so the pattern actually matches
         content = 'KEY = "sk_live_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"'
         findings = scan_content(content, "config.py")
-        assert len(findings) > 0, "Pattern did not match — check the test key length"
+        assert len(findings) > 0, "Pattern did not match; check the test key length"
         for finding in findings:
             assert "sk_live_" not in finding.line_content

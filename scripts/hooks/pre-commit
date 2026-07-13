@@ -1,20 +1,20 @@
 #!/bin/sh
-# Nigerian Fintech DevSecOps — pre-commit compliance gate.
+# Nigerian Fintech DevSecOps pre-commit compliance gate.
 # Installed via scripts/install-hooks.sh (sets core.hooksPath to scripts/hooks).
 # Blocks the commit if the scanner finds CRITICAL or HIGH severity issues.
 # Bypass in an emergency with: git commit --no-verify
 
-echo "🛡️  Running compliance scan before commit..."
-python3 compliance_engine/scanner.py . --exclude tests,evaluation_data
+echo " Running compliance scan before commit..."
+python3 compliance_engine/scanner.py . --exclude tests,evaluation_data,reports
 status=$?
 
 if [ $status -ne 0 ]; then
     echo ""
-    echo "❌ Commit blocked: the issues above must be fixed before this code is committed."
+    echo "Commit blocked: the issues above must be fixed before this code is committed."
     echo "   To inspect them visually, run:"
     echo "       python3 -m streamlit run dashboard/app.py"
     exit $status
 fi
 
-echo "✅ Compliance scan passed."
+echo "Compliance scan passed."
 exit 0

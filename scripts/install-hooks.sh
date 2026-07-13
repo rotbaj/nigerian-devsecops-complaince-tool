@@ -4,5 +4,5 @@
 cd "$(git rev-parse --show-toplevel)" || exit 1
 git config core.hooksPath scripts/hooks
 chmod +x scripts/hooks/*
-echo "✅ Git hooks installed. Every commit will now run the compliance scan."
+echo "Git hooks installed. Every commit will now run the compliance scan."
 echo "   To uninstall: git config --unset core.hooksPath"
