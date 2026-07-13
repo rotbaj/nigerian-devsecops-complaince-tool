@@ -80,6 +80,44 @@ def fetch_ci_json(repo_slug, filename):
     with urllib.request.urlopen(url, timeout=10) as resp:
         return json.load(resp)
 
+
+# Trivy reports published by the pipeline, in dashboard display order.
+TRIVY_REPORTS = {
+    "Docker image (known CVEs)": "trivy_image.json",
+    "Vulnerable corpus (infrastructure)": "trivy_vulnerable.json",
+    "Clean corpus (infrastructure)": "trivy_clean.json",
+}
+
+
+def summarize_trivy(report):
+    """Flatten a Trivy JSON report into severity counts + display rows."""
+    counts = {}
+    rows = []
+    for res in report.get("Results") or []:
+        target = res.get("Target", "")
+        for m in res.get("Misconfigurations") or []:
+            sev = m.get("Severity", "UNKNOWN")
+            counts[sev] = counts.get(sev, 0) + 1
+            rows.append({
+                "Severity": sev,
+                "Issue": m.get("Title", m.get("ID", "")),
+                "Where": target,
+                "How to fix": m.get("Resolution", ""),
+            })
+        for v in res.get("Vulnerabilities") or []:
+            sev = v.get("Severity", "UNKNOWN")
+            counts[sev] = counts.get(sev, 0) + 1
+            fixed = v.get("FixedVersion", "")
+            rows.append({
+                "Severity": sev,
+                "Issue": f"{v.get('VulnerabilityID', '')}: {v.get('Title', '')}",
+                "Where": f"{v.get('PkgName', '')} {v.get('InstalledVersion', '')}",
+                "How to fix": f"Upgrade to {fixed}" if fixed else "No fix released yet",
+            })
+    sev_rank = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
+    rows.sort(key=lambda r: sev_rank.get(r["Severity"], 9))
+    return counts, rows
+
 # ─── Header ────────────────────────────────────────────────────
 st.title("🛡️ Nigerian Fintech DevSecOps Compliance Dashboard")
 st.caption("Automated security & NDPA 2023 compliance scanning for Nigerian Fintech CI/CD pipelines")
@@ -196,6 +234,15 @@ elif mode == "📄 Load Report":
                         )
                     except Exception:
                         st.session_state.pop("ci_history", None)
+                    # And the Trivy reports (best-effort: absent until the
+                    # pipeline has run with Trivy export enabled).
+                    ci_trivy = {}
+                    for label, fname in TRIVY_REPORTS.items():
+                        try:
+                            ci_trivy[label] = fetch_ci_json(repo_slug.strip(), fname)
+                        except Exception:
+                            pass
+                    st.session_state["ci_trivy"] = ci_trivy
                 except urllib.error.HTTPError as e:
                     if e.code == 404:
                         st.error(
@@ -503,3 +550,43 @@ if result_data:
     # ── Scan Metadata ──
     st.markdown("---")
     st.caption(f"Scan timestamp: {result_data.get('scanned_at', 'N/A')} UTC")
+
+# ─── Trivy: Infrastructure & Container Scan ────────────────────
+# Second, independent scanner run by the CI pipeline. Shown whenever CI
+# results have been fetched, so stakeholders see the full security picture
+# without reading pipeline logs.
+ci_trivy = st.session_state.get("ci_trivy") or {}
+if ci_trivy:
+    TRIVY_EXPECTATION = {
+        "Docker image (known CVEs)":
+            "The application container, checked against the global vulnerability "
+            "database. Anything listed here is a known, published weakness.",
+        "Vulnerable corpus (infrastructure)":
+            "Deliberately insecure test files — findings here are EXPECTED and "
+            "prove the pipeline catches cloud misconfigurations.",
+        "Clean corpus (infrastructure)":
+            "Well-configured test files — this list should be empty.",
+    }
+    st.markdown("---")
+    st.subheader("🐳 Infrastructure & Container Scan (Trivy)")
+    st.caption(
+        "Results from Trivy, the pipeline's second scanner: it checks the Docker "
+        "image for known vulnerabilities (CVEs) and infrastructure files for "
+        "insecure cloud configurations."
+    )
+    for tab, label in zip(st.tabs(list(ci_trivy)), ci_trivy):
+        with tab:
+            st.caption(TRIVY_EXPECTATION.get(label, ""))
+            counts, rows = summarize_trivy(ci_trivy[label])
+            t1, t2, t3 = st.columns(3)
+            t1.metric("🔴 Critical", counts.get("CRITICAL", 0))
+            t2.metric("🟠 High", counts.get("HIGH", 0))
+            t3.metric("Total issues", len(rows))
+            if rows:
+                st.dataframe(
+                    pd.DataFrame(rows),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+            else:
+                st.success("✅ No issues found in this scan.")

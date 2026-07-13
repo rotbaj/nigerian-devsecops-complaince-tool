@@ -294,8 +294,25 @@ provider "aws" {
   region = "af-south-1"
 }
 
+# Customer-managed key: auditable, rotatable encryption for customer data
+resource "aws_kms_key" "kyc_docs_key" {
+  description         = "CMK for the KYC document bucket"
+  enable_key_rotation = true
+}
+
 resource "aws_s3_bucket" "user_kyc_documents" {
   bucket = "fintech-kyc-docs-prod"
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "kyc_docs_sse" {
+  bucket = aws_s3_bucket.user_kyc_documents.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = aws_kms_key.kyc_docs_key.arn
+    }
+  }
 }
 
 resource "aws_s3_bucket_public_access_block" "kyc_docs_block" {
@@ -451,7 +468,14 @@ for i in range(1, 101):
         filename = os.path.join(GOOD_DIR, f"config_settings_{i}.py")
 
     elif file_type == "terraform":
+        # Resource names must be unique per file: Trivy parses the whole
+        # folder as one Terraform module, and duplicate addresses stop it
+        # from associating each bucket with its public-access block and
+        # encryption config (making clean files look misconfigured).
         content = CLEAN_TERRAFORM
+        for name in ("kyc_docs_key", "user_kyc_documents", "kyc_docs_sse",
+                     "kyc_docs_block", "database_storage"):
+            content = content.replace(name, f"{name}_{i}")
         filename = os.path.join(GOOD_DIR, f"aws_infrastructure_{i}.tf")
 
     else:

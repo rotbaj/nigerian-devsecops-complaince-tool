@@ -100,7 +100,8 @@ jobs:
         with:
           scan-type: "config"
           scan-ref: "evaluation_data/vulnerable"
-          format: "table"
+          format: "json"
+          output: "reports/trivy_vulnerable.json"
           exit-code: "1"
           severity: "CRITICAL,HIGH"
 
@@ -120,7 +121,8 @@ jobs:
         with:
           scan-type: "config"
           scan-ref: "evaluation_data/clean"
-          format: "table"
+          format: "json"
+          output: "reports/trivy_clean.json"
           exit-code: "0"
           severity: "CRITICAL,HIGH"
 
@@ -150,10 +152,35 @@ jobs:
                   print(f"| False positives | {'✅ none' if ok else f'❌ {detected} clean files flagged'} |")
               print()
 
+          def trivy_section(title, path, expect_findings):
+              print(f"## {title}")
+              if not os.path.exists(path):
+                  print("_Report not produced (scan step failed early)._\n")
+                  return
+              r = json.load(open(path))
+              counts = {}
+              for res in r.get("Results") or []:
+                  for m in (res.get("Misconfigurations") or []):
+                      counts[m["Severity"]] = counts.get(m["Severity"], 0) + 1
+              total = sum(counts.values())
+              print("| Metric | Value |")
+              print("|--------|-------|")
+              print(f"| Misconfigurations found | {total} |")
+              print(f"| Critical / High | {counts.get('CRITICAL', 0)} / {counts.get('HIGH', 0)} |")
+              if expect_findings:
+                  print(f"| Detection | {'✅ planted misconfigs caught' if total else '❌ nothing caught'} |")
+              else:
+                  print(f"| False positives | {'✅ none' if total == 0 else f'❌ {total} flagged'} |")
+              print()
+
           section("🟢 Clean corpus (100 files — expected: no findings)",
                   "reports/clean_report.json", expect_findings=False)
           section("🔴 Vulnerable corpus (100 files — expected: all caught)",
                   "reports/vulnerable_report.json", expect_findings=True)
+          trivy_section("🐳 Trivy IaC — vulnerable corpus (expected: misconfigs caught)",
+                        "reports/trivy_vulnerable.json", expect_findings=True)
+          trivy_section("🐳 Trivy IaC — clean corpus (expected: no misconfigs)",
+                        "reports/trivy_clean.json", expect_findings=False)
           print("To inspect either scan in the dashboard: download the "
                 "`evaluation-reports` artifact below, unzip it, then run the "
                 "dashboard locally and drop the JSON into **Load Report** mode.")
@@ -167,6 +194,8 @@ jobs:
           path: |
             reports/clean_report.json
             reports/vulnerable_report.json
+            reports/trivy_clean.json
+            reports/trivy_vulnerable.json
             reports/scan_history.json
 
   # ──────────────────────────────────────────
@@ -179,7 +208,7 @@ jobs:
   publish-results:
     name: 📤 Publish Results for Dashboard
     runs-on: ubuntu-latest
-    needs: [compliance-scan, evaluation]
+    needs: [compliance-scan, evaluation, container-scan]
     # Runs even when a scan failed — failed scans are exactly what the
     # dashboard needs to show. Skipped on PRs (no write access from forks).
     if: ${{ always() && github.event_name != 'pull_request' }}
@@ -219,7 +248,8 @@ jobs:
                       seen.add(key)
           history.sort(key=lambda e: e["scanned_at"])
           json.dump(history, open("results/scan_history.json", "w"), indent=2)
-          for name in ("scan_report.json", "clean_report.json", "vulnerable_report.json"):
+          for name in ("scan_report.json", "clean_report.json", "vulnerable_report.json",
+                       "trivy_image.json", "trivy_clean.json", "trivy_vulnerable.json"):
               for path in glob.glob(f"ci_reports/*/{name}"):
                   shutil.copy(path, f"results/{name}")
           EOF
@@ -250,12 +280,20 @@ jobs:
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: "fintech-app:${{ github.sha }}"
-          format: "table"
+          format: "json"
+          output: "reports/trivy_image.json"
           exit-code: "1"
           severity: "CRITICAL,HIGH"
           ignore-unfixed: true
           # Documented risk acceptances (see .trivyignore for justifications)
           trivyignores: ".trivyignore"
+
+      - name: Upload image scan report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-image-report
+          path: reports/trivy_image.json
 
       - name: Trivy IaC scan (Terraform)
         uses: aquasecurity/trivy-action@v0.36.0
