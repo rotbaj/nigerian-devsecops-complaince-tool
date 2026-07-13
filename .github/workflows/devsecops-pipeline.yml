@@ -276,6 +276,10 @@ jobs:
       - name: Build Docker image
         run: docker build -t fintech-app:${{ github.sha }} .
 
+      - name: Create reports directory
+        # reports/ is git-ignored, and Trivy won't create it for its output file
+        run: mkdir -p reports
+
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@v0.36.0
         with:
