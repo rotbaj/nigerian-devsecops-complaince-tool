@@ -1,0 +1,59 @@
+see trivy scan results 
+Python (python-pkg)
+===================
+Total: 5 (HIGH: 5, CRITICAL: 0)
+
+┌─────────────────────┬────────────────┬──────────┬────────┬───────────────────┬────────────────┬─────────────────────────────────────────────────────────────┐
+│       Library       │ Vulnerability  │ Severity │ Status │ Installed Version │ Fixed Version  │                            Title                            │
+├─────────────────────┼────────────────┼──────────┼────────┼───────────────────┼────────────────┼─────────────────────────────────────────────────────────────┤
+│ pillow (METADATA)   │ CVE-2026-25990 │ HIGH     │ fixed  │ 10.4.0            │ 12.1.1         │ pillow: Pillow: Out-of-bounds Write via Specially Crafted   │
+│                     │                │          │        │                   │                │ PSD Image                                                   │
+│                     │                │          │        │                   │                │ https://avd.aquasec.com/nvd/cve-2026-25990                  │
+│                     ├────────────────┤          │        │                   ├────────────────┼─────────────────────────────────────────────────────────────┤
+│                     │ CVE-2026-40192 │          │        │                   │ 12.2.0         │ Pillow: Pillow: Denial of Service via decompression bomb in │
+│                     │                │          │        │                   │                │ FITS image processing...                                    │
+│                     │                │          │        │                   │                │ https://avd.aquasec.com/nvd/cve-2026-40192                  │
+│                     ├────────────────┤          │        │                   │                ├─────────────────────────────────────────────────────────────┤
+│                     │ CVE-2026-42311 │          │        │                   │                │ Pillow: python-pillow: Pillow: Arbitrary code execution via │
+│                     │                │          │        │                   │                │ malicious PSD file processing                               │
+│                     │                │          │        │                   │                │ https://avd.aquasec.com/nvd/cve-2026-42311                  │
+├─────────────────────┼────────────────┤          │        ├───────────────────┼────────────────┼─────────────────────────────────────────────────────────────┤
+│ protobuf (METADATA) │ CVE-2026-0994  │          │        │ 4.25.9            │ 6.33.5, 5.29.6 │ python: protobuf: Protobuf: Denial of Service due to        │
+│                     │                │          │        │                   │                │ recursion depth bypass                                      │
+│                     │                │          │        │                   │                │ https://avd.aquasec.com/nvd/cve-2026-0994                   │
+├─────────────────────┼────────────────┤          │        ├───────────────────┼────────────────┼─────────────────────────────────────────────────────────────┤
+│ pyarrow (METADATA)  │ CVE-2026-25087 │          │        │ 15.0.0            │ 23.0.1         │ apache-arrow: Apache Arrow C++: Denial of Service via Use   │
+│                     │                │          │        │                   │                │ After Free vulnerability...                                 │
+│                     │                │          │        │                   │                │ https://avd.aquasec.com/nvd/cve-2026-25087                  │
+└─────────────────────┴────────────────┴──────────┴────────┴───────────────────┴────────────────┴─────────────────────────────────────────────────────────────┘
+Error: Process completed with exit code 1.
+Run rm -f trivy_envs.txtsee trivy scan results 
+Python (python-pkg)
+===================
+Total: 5 (HIGH: 5, CRITICAL: 0)
+
+┌─────────────────────┬────────────────┬──────────┬────────┬───────────────────┬────────────────┬─────────────────────────────────────────────────────────────┐
+│       Library       │ Vulnerability  │ Severity │ Status │ Installed Version │ Fixed Version  │                            Title                            │
+├─────────────────────┼────────────────┼──────────┼────────┼───────────────────┼────────────────┼─────────────────────────────────────────────────────────────┤
+│ pillow (METADATA)   │ CVE-2026-25990 │ HIGH     │ fixed  │ 10.4.0            │ 12.1.1         │ pillow: Pillow: Out-of-bounds Write via Specially Crafted   │
+│                     │                │          │        │                   │                │ PSD Image                                                   │
+│                     │                │          │        │                   │                │ https://avd.aquasec.com/nvd/cve-2026-25990                  │
+│                     ├────────────────┤          │        │                   ├────────────────┼─────────────────────────────────────────────────────────────┤
+│                     │ CVE-2026-40192 │          │        │                   │ 12.2.0         │ Pillow: Pillow: Denial of Service via decompression bomb in │
+│                     │                │          │        │                   │                │ FITS image processing...                                    │
+│                     │                │          │        │                   │                │ https://avd.aquasec.com/nvd/cve-2026-40192                  │
+│                     ├────────────────┤          │        │                   │                ├─────────────────────────────────────────────────────────────┤
+│                     │ CVE-2026-42311 │          │        │                   │                │ Pillow: python-pillow: Pillow: Arbitrary code execution via │
+│                     │                │          │        │                   │                │ malicious PSD file processing                               │
+│                     │                │          │        │                   │                │ https://avd.aquasec.com/nvd/cve-2026-42311                  │
+├─────────────────────┼────────────────┤          │        ├───────────────────┼────────────────┼─────────────────────────────────────────────────────────────┤
+│ protobuf (METADATA) │ CVE-2026-0994  │          │        │ 4.25.9            │ 6.33.5, 5.29.6 │ python: protobuf: Protobuf: Denial of Service due to        │
+│                     │                │          │        │                   │                │ recursion depth bypass                                      │
+│                     │                │          │        │                   │                │ https://avd.aquasec.com/nvd/cve-2026-0994                   │
+├─────────────────────┼────────────────┤          │        ├───────────────────┼────────────────┼─────────────────────────────────────────────────────────────┤
+│ pyarrow (METADATA)  │ CVE-2026-25087 │          │        │ 15.0.0            │ 23.0.1         │ apache-arrow: Apache Arrow C++: Denial of Service via Use   │
+│                     │                │          │        │                   │                │ After Free vulnerability...                                 │
+│                     │                │          │        │                   │                │ https://avd.aquasec.com/nvd/cve-2026-25087                  │
+└─────────────────────┴────────────────┴──────────┴────────┴───────────────────┴────────────────┴─────────────────────────────────────────────────────────────┘
+Error: Process completed with exit code 1.
+Run rm -f trivy_envs.txt

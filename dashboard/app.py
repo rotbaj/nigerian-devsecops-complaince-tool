@@ -121,6 +121,17 @@ if mode == "📂 Scan Directory":
             else os.path.normpath(os.path.join(BASE_DIR, scan_target))
         )
         display_target = repo_relative(resolved_target)
+        # evaluation_data/ is git-ignored (synthetic secrets), so on a fresh
+        # clone — including the hosted Streamlit Cloud app — it doesn't exist
+        # until generated. Generate it on demand when it's the scan target.
+        if not os.path.exists(resolved_target) and display_target.split(os.sep)[0] == "evaluation_data":
+            generator = os.path.join(BASE_DIR, "generate_eval_data.py")
+            if os.path.exists(generator):
+                with st.spinner("Generating the 200-file evaluation corpus (first run only)..."):
+                    subprocess.run(
+                        [sys.executable, generator],
+                        cwd=BASE_DIR, check=True, capture_output=True,
+                    )
         # Fix 2: Validate the path exists before trying to scan it
         if not os.path.exists(resolved_target):
             st.error(f"❌ Path not found: `{display_target}`. Please enter a valid file or directory.")
