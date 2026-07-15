@@ -88,6 +88,11 @@ remediation text:
 | NG-CONT-002 | CRITICAL | container | Secret in Dockerfile ENV |
 | NG-CONT-003 | WARNING | container | Unpinned Docker image (`:latest` or missing tag) |
 
+NG-NDPA-006 generalises the narrower region checks NG-NDPA-001 and NG-NDPA-002,
+which are retained for their specific remediation text. The overlap never
+double-counts in the evaluation metric because detection is measured per file,
+not per finding.
+
 Findings redact the matched line content in saved reports so a scan report is never
 itself a secrets leak.
 

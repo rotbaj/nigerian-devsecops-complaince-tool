@@ -41,7 +41,7 @@ BVNs and phone numbers left in source files, data hosted outside approved region
 to NDPA 2023, and insecure Docker configuration. Any CRITICAL or HIGH finding fails the
 build with exit code 1, which blocks the merge. WARNING findings are reported but do not block.
 
-The system has three components:
+The system has three main components:
 
 1. Scanner (`compliance_engine/scanner.py`) checks every file against 16 rules.
    It runs from the command line and can also be imported as a module.
@@ -112,7 +112,8 @@ Then open http://localhost:8501 in the browser:
   The result is a BUILD FAILED banner with findings you can filter and expand.
 - To show a clean run, scan `evaluation_data/clean` instead.
 - To check the project itself, leave the defaults unchanged and click Run Scan.
-- Load Report mode reopens the results of the previous scan without re-scanning.
+- Load Report mode shows results without re-scanning: the latest CI results, an
+  uploaded report file, or the local report from a previous scan.
 
 ---
 
