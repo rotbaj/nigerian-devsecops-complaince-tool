@@ -4,7 +4,7 @@
 # Blocks the commit if the scanner finds CRITICAL or HIGH severity issues.
 # Bypass in an emergency with: git commit --no-verify
 
-echo " Running compliance scan before commit..."
+echo "Running compliance scan before commit..."
 python3 compliance_engine/scanner.py . --exclude tests,evaluation_data,reports
 status=$?
 

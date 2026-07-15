@@ -142,7 +142,21 @@ resource "aws_security_group" "core_banking_sg" {
   }
 }
 
+# NDPA Violation: plaintext HTTP listener, so card and KYC data crosses the
+# network unencrypted (NG-NDPA-005; Trivy also flags plain HTTP on ALBs)
+resource "aws_lb_listener" "api_http" {
+  load_balancer_arn = aws_lb.api_lb.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.api_tg.arn
+  }
+}
+
 # Trivy: publicly accessible RDS with plaintext password and no encryption
+# (the public-access flag below also fires NG-NDPA-007)
 resource "aws_db_instance" "customer_db" {
   identifier          = "fintech-customers"
   engine              = "postgres"
@@ -329,6 +343,38 @@ resource "aws_ebs_volume" "database_storage" {
   size              = 500
   encrypted         = true
 }
+
+# Encryption in transit: HTTPS-only listener with a current TLS policy
+# (protocol = "HTTPS" must NOT trigger NG-NDPA-005)
+resource "aws_lb_listener" "api_https" {
+  load_balancer_arn = "arn:aws:elasticloadbalancing:af-south-1:123456789012:loadbalancer/app/fintech-api/0f1e2d3c4b5a6978"
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = "arn:aws:acm:af-south-1:123456789012:certificate/11aa22bb-33cc-44dd-55ee-66ff77aa88bb"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = "arn:aws:elasticloadbalancing:af-south-1:123456789012:targetgroup/fintech-api/a1b2c3d4e5f60789"
+  }
+}
+
+# Private, encrypted database with a managed master password
+# (publicly_accessible = false must NOT trigger NG-NDPA-007)
+resource "aws_db_instance" "customer_db" {
+  identifier                          = "fintech-customers"
+  engine                              = "postgres"
+  instance_class                      = "db.t3.medium"
+  allocated_storage                   = 100
+  publicly_accessible                 = false
+  storage_encrypted                   = true
+  kms_key_id                          = aws_kms_key.kyc_docs_key.arn
+  manage_master_user_password         = true
+  iam_database_authentication_enabled = true
+  deletion_protection                 = true
+  backup_retention_period             = 30
+  skip_final_snapshot                 = false
+}
 """
 
 CLEAN_DOCKER = """\
@@ -474,7 +520,8 @@ for i in range(1, 101):
         # encryption config (making clean files look misconfigured).
         content = CLEAN_TERRAFORM
         for name in ("kyc_docs_key", "user_kyc_documents", "kyc_docs_sse",
-                     "kyc_docs_block", "database_storage"):
+                     "kyc_docs_block", "database_storage", "api_https",
+                     "customer_db"):
             content = content.replace(name, f"{name}_{i}")
         filename = os.path.join(GOOD_DIR, f"aws_infrastructure_{i}.tf")
 

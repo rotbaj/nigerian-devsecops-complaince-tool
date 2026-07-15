@@ -14,7 +14,7 @@ nigerian-devsecops/
 │   └── workflows/
 │       └── devsecops-pipeline.yml   ← Full CI/CD pipeline (GitHub Actions)
 ├── compliance_engine/
-│   └── scanner.py                   ← Core scanner (13 rules, CLI + importable)
+│   └── scanner.py                   ← Core scanner (16 rules, CLI + importable)
 ├── dashboard/
 │   └── app.py                       ← Streamlit compliance dashboard
 ├── scripts/
@@ -43,7 +43,7 @@ build with exit code 1, which blocks the merge. WARNING findings are reported bu
 
 The system has three components:
 
-1. Scanner (`compliance_engine/scanner.py`) checks every file against 13 rules.
+1. Scanner (`compliance_engine/scanner.py`) checks every file against 16 rules.
    It runs from the command line and can also be imported as a module.
 2. Pipeline (`.github/workflows/devsecops-pipeline.yml`) runs the scanner on every push
    and pull request, followed by a Trivy scan for known CVEs and infrastructure
@@ -84,7 +84,7 @@ This writes the 200 evaluation files plus the 2 fixture files the unit tests nee
 ```bash
 python compliance_engine/scanner.py evaluation_data/vulnerable
 ```
-Expected result: FAILED, roughly 300 findings across all 100 files, exit code 1.
+Expected result: FAILED, roughly 350 findings across all 100 files, exit code 1.
 
 4. Scan the clean set:
 ```bash
@@ -157,6 +157,9 @@ docker run -p 8501:8501 nigerian-devsecops
 | NG-NDPA-002 | HIGH     | ndpa      | Data Sovereignty (eu-west)                           |
 | NG-NDPA-003 | HIGH     | ndpa      | Encryption at rest disabled                          |
 | NG-NDPA-004 | CRITICAL | ndpa      | Public S3 Bucket                                     |
+| NG-NDPA-005 | HIGH     | ndpa      | Encryption in transit not enforced (plaintext HTTP)  |
+| NG-NDPA-006 | HIGH     | ndpa      | Region outside af-south-1 (generalises 001/002)      |
+| NG-NDPA-007 | CRITICAL | ndpa      | Publicly accessible database                         |
 | NG-CONT-001 | HIGH     | container | Dockerfile running as root                           |
 | NG-CONT-002 | CRITICAL | container | Secret in Dockerfile ENV                             |
 | NG-CONT-003 | WARNING  | container | Unpinned Docker image (:latest or missing tag)       |

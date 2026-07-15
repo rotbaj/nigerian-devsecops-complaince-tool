@@ -158,6 +158,57 @@ class TestNDPACompliance:
         rule_ids = [f.rule_id for f in findings]
         assert "NG-NDPA-001" in rule_ids
 
+    def test_detects_plaintext_http_listener(self):
+        # A plaintext HTTP listener means personal data is unencrypted in transit
+        content = 'protocol = "HTTP"'
+        findings = scan_content(content, "lb.tf")
+        rule_ids = [f.rule_id for f in findings]
+        assert "NG-NDPA-005" in rule_ids
+
+    def test_https_listener_not_flagged(self):
+        # The closing quote in the pattern must stop "HTTPS" from matching
+        content = 'protocol = "HTTPS"'
+        findings = scan_content(content, "lb.tf")
+        transit_findings = [f for f in findings if f.rule_id == "NG-NDPA-005"]
+        assert len(transit_findings) == 0
+
+    def test_detects_region_outside_af_south_1(self):
+        # Any well-formed AWS region other than af-south-1 must be flagged
+        content = 'region = "us-west-2"'
+        findings = scan_content(content, "main.tf")
+        rule_ids = [f.rule_id for f in findings]
+        assert "NG-NDPA-006" in rule_ids
+
+    def test_af_south_1_not_flagged_by_region_rule(self):
+        # The approved region passes the negative lookahead
+        content = 'region = "af-south-1"'
+        findings = scan_content(content, "main.tf")
+        region_findings = [f for f in findings if f.rule_id == "NG-NDPA-006"]
+        assert len(region_findings) == 0
+
+    def test_detects_publicly_accessible_database(self):
+        content = "publicly_accessible = true"
+        findings = scan_content(content, "rds.tf")
+        rule_ids = [f.rule_id for f in findings]
+        assert "NG-NDPA-007" in rule_ids
+
+    def test_private_database_not_flagged(self):
+        content = "publicly_accessible = false"
+        findings = scan_content(content, "rds.tf")
+        db_findings = [f for f in findings if f.rule_id == "NG-NDPA-007"]
+        assert len(db_findings) == 0
+
+    def test_new_ndpa_rules_not_applied_to_python_files(self):
+        # The infrastructure-file-only scoping must hold for the new rules too
+        content = (
+            'protocol = "HTTP"\n'
+            'region = "us-west-2"\n'
+            'publicly_accessible = true\n'
+        )
+        findings = scan_content(content, "settings.py")
+        ndpa_findings = [f for f in findings if f.category == "ndpa"]
+        assert len(ndpa_findings) == 0
+
 
 # ─── Container Security Tests ──────────────────────────────────
 

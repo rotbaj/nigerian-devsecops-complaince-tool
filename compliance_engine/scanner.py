@@ -127,6 +127,41 @@ RULES = [
         "remediation": "Set bucket ACL to private and use pre-signed URLs for access.",
     },
 
+    # --- NDPA 2023: additional data-security controls (infrastructure files only) ---
+    {
+        "id": "NG-NDPA-005",
+        "name": "Encryption in Transit Not Enforced",
+        "severity": "HIGH",
+        # Flags a plaintext HTTP listener/target. The closing quote prevents this
+        # from matching "HTTPS", so only unencrypted HTTP is caught.
+        "pattern": r'protocol\s*=\s*["\']HTTP["\']',
+        "category": "ndpa",
+        "description": "Plaintext HTTP detected. NDPA 2023 s.39 requires appropriate technical measures; personal data must be encrypted in transit.",
+        "remediation": "Use HTTPS/TLS. Set protocol to HTTPS and redirect HTTP to HTTPS, or enable rds.force_ssl.",
+    },
+    {
+        "id": "NG-NDPA-006",
+        "name": "Data Hosted Outside Approved Region",
+        "severity": "HIGH",
+        # Generalised localisation check: flags any well-formed AWS region that is
+        # not af-south-1 (Cape Town), the approved region for keeping Nigerian data
+        # on the continent. Supersedes the narrow us-east-1 / eu-west checks.
+        "pattern": r'region\s*=\s*["\'](?!af-south-1)[a-z]{2}-[a-z]+-\d+["\']',
+        "category": "ndpa",
+        "description": "Cloud region outside af-south-1 detected. Hosting Nigerian personal data abroad triggers NDPA 2023 s.41 cross-border transfer obligations.",
+        "remediation": "Use af-south-1 unless a lawful cross-border transfer basis under s.41-43 is documented.",
+    },
+    {
+        "id": "NG-NDPA-007",
+        "name": "Publicly Accessible Database",
+        "severity": "CRITICAL",
+        # Flags an RDS instance exposed to the public internet.
+        "pattern": r'publicly_accessible\s*=\s*true',
+        "category": "ndpa",
+        "description": "Publicly accessible database detected. This exposes personal data and likely violates NDPA 2023 s.39 confidentiality obligations.",
+        "remediation": "Set publicly_accessible = false and place the database in a private subnet.",
+    },
+
     # --- Container Security ---
     {
         "id": "NG-CONT-001",

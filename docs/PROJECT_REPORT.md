@@ -39,7 +39,7 @@ reading pipeline logs.
 The delivered system has five components:
 
 1. **Compliance scanner** (`compliance_engine/scanner.py`): a regex-based static
-   analysis engine with 13 rules across four categories (secret, pii, ndpa,
+   analysis engine with 16 rules across four categories (secret, pii, ndpa,
    container). It is both a CLI tool and an importable module. Any CRITICAL or HIGH
    finding causes exit code 1, which fails a build.
 2. **Evaluation data generator** (`generate_eval_data.py`): produces a 200-file
@@ -66,7 +66,7 @@ a persistent reporting surface for management. A sixth supporting element, the
 
 ### 3.1 Rule set
 
-13 rules, each with an ID, severity, category, regex pattern, description, and
+16 rules, each with an ID, severity, category, regex pattern, description, and
 remediation text:
 
 | Rule ID | Severity | Category | Detects |
@@ -81,6 +81,9 @@ remediation text:
 | NG-NDPA-002 | HIGH | ndpa | Data hosted in eu-west regions |
 | NG-NDPA-003 | HIGH | ndpa | Encryption at rest disabled |
 | NG-NDPA-004 | CRITICAL | ndpa | Public S3 bucket |
+| NG-NDPA-005 | HIGH | ndpa | Encryption in transit not enforced (plaintext HTTP) |
+| NG-NDPA-006 | HIGH | ndpa | Data hosted outside af-south-1 (generalises 001/002) |
+| NG-NDPA-007 | CRITICAL | ndpa | Publicly accessible database |
 | NG-CONT-001 | HIGH | container | Dockerfile running as root |
 | NG-CONT-002 | CRITICAL | container | Secret in Dockerfile ENV |
 | NG-CONT-003 | WARNING | container | Unpinned Docker image (`:latest` or missing tag) |
@@ -430,7 +433,7 @@ dashboard for a visual view. Design points worth writing up:
 
 ## 8. Testing and Verification Methodology
 
-- **Unit tests**: 33 pytest tests covering every rule, both context-aware PII
+- **Unit tests**: 40 pytest tests covering every rule, both context-aware PII
   rules' negative cases, rule scoping, the dot-path regression, exclude behavior,
   `.github` visibility, report redaction, and fixture-based end-to-end scans.
   Fixtures are regenerated deterministically before every test run, locally and
@@ -452,7 +455,7 @@ dashboard for a visual view. Design points worth writing up:
   vulnerable, so CI outcomes were known in advance rather than discovered from
   failed runs.
 - **Evaluation baseline**: 100/100 vulnerable files detected by the custom
-  scanner (finding totals vary between generated corpora, roughly 300 to 355,
+  scanner (finding totals vary between generated corpora, roughly 340 to 430,
   because each file receives a random mix of vulnerability templates; the
   detection rate and the zero-false-positive result are the stable metrics).
   0 findings on the 100-file clean corpus even in strict fail-on-warning mode.
@@ -515,7 +518,7 @@ python generate_eval_data.py
 python compliance_engine/scanner.py evaluation_data/vulnerable   # expect FAILED, exit 1
 python compliance_engine/scanner.py evaluation_data/clean        # expect PASSED, exit 0
 python compliance_engine/scanner.py . --exclude tests,evaluation_data,reports  # expect PASSED
-pytest tests/ -v                                                 # expect 33 passed
+pytest tests/ -v                                                 # expect 40 passed
 streamlit run dashboard/app.py
 sh scripts/install-hooks.sh                                      # enable the commit gate
 ```
