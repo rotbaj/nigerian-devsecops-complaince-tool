@@ -1,0 +1,362 @@
+[
+  {
+    "scanned_at": "2026-07-12T19:13:31.268369+00:00",
+    "target": ".",
+    "files_scanned": 13,
+    "total_findings": 0,
+    "critical": 0,
+    "high": 0,
+    "warning": 0,
+    "passed": true
+  },
+  {
+    "scanned_at": "2026-07-12T19:14:00.047263+00:00",
+    "target": "evaluation_data/clean",
+    "files_scanned": 100,
+    "total_findings": 0,
+    "critical": 0,
+    "high": 0,
+    "warning": 0,
+    "passed": true
+  },
+  {
+    "scanned_at": "2026-07-12T19:14:00.118443+00:00",
+    "target": "evaluation_data/vulnerable",
+    "files_scanned": 100,
+    "total_findings": 347,
+    "critical": 163,
+    "high": 161,
+    "warning": 23,
+    "passed": false
+  },
+  {
+    "scanned_at": "2026-07-13T14:26:07.011960+00:00",
+    "target": ".",
+    "files_scanned": 14,
+    "total_findings": 0,
+    "critical": 0,
+    "high": 0,
+    "warning": 0,
+    "passed": true
+  },
+  {
+    "scanned_at": "2026-07-13T14:26:56.415557+00:00",
+    "target": "evaluation_data/clean",
+    "files_scanned": 100,
+    "total_findings": 0,
+    "critical": 0,
+    "high": 0,
+    "warning": 0,
+    "passed": true
+  },
+  {
+    "scanned_at": "2026-07-13T14:26:56.486493+00:00",
+    "target": "evaluation_data/vulnerable",
+    "files_scanned": 100,
+    "total_findings": 334,
+    "critical": 171,
+    "high": 131,
+    "warning": 32,
+    "passed": false
+  },
+  {
+    "scanned_at": "2026-07-13T14:58:19.087083+00:00",
+    "target": ".",
+    "files_scanned": 14,
+    "total_findings": 0,
+    "critical": 0,
+    "high": 0,
+    "warning": 0,
+    "passed": true
+  },
+  {
+    "scanned_at": "2026-07-13T14:58:44.561111+00:00",
+    "target": "evaluation_data/clean",
+    "files_scanned": 100,
+    "total_findings": 0,
+    "critical": 0,
+    "high": 0,
+    "warning": 0,
+    "passed": true
+  },
+  {
+    "scanned_at": "2026-07-13T14:58:44.637875+00:00",
+    "target": "evaluation_data/vulnerable",
+    "files_scanned": 100,
+    "total_findings": 306,
+    "critical": 149,
+    "high": 133,
+    "warning": 24,
+    "passed": false
+  },
+  {
+    "scanned_at": "2026-07-13T15:18:49.812483+00:00",
+    "target": ".",
+    "files_scanned": 14,
+    "total_findings": 0,
+    "critical": 0,
+    "high": 0,
+    "warning": 0,
+    "passed": true
+  },
+  {
+    "scanned_at": "2026-07-13T15:19:17.740829+00:00",
+    "target": "evaluation_data/clean",
+    "files_scanned": 100,
+    "total_findings": 0,
+    "critical": 0,
+    "high": 0,
+    "warning": 0,
+    "passed": true
+  },
+  {
+    "scanned_at": "2026-07-13T15:19:17.817727+00:00",
+    "target": "evaluation_data/vulnerable",
+    "files_scanned": 100,
+    "total_findings": 332,
+    "critical": 143,
+    "high": 163,
+    "warning": 26,
+    "passed": false
+  },
+  {
+    "scanned_at": "2026-07-13T15:21:56.352590+00:00",
+    "target": ".",
+    "files_scanned": 14,
+    "total_findings": 0,
+    "critical": 0,
+    "high": 0,
+    "warning": 0,
+    "passed": true
+  },
+  {
+    "scanned_at": "2026-07-13T15:22:26.702069+00:00",
+    "target": "evaluation_data/clean",
+    "files_scanned": 100,
+    "total_findings": 0,
+    "critical": 0,
+    "high": 0,
+    "warning": 0,
+    "passed": true
+  },
+  {
+    "scanned_at": "2026-07-13T15:22:26.780881+00:00",
+    "target": "evaluation_data/vulnerable",
+    "files_scanned": 100,
+    "total_findings": 317,
+    "critical": 158,
+    "high": 132,
+    "warning": 27,
+    "passed": false
+  },
+  {
+    "scanned_at": "2026-07-13T15:39:32.585252+00:00",
+    "target": ".",
+    "files_scanned": 14,
+    "total_findings": 0,
+    "critical": 0,
+    "high": 0,
+    "warning": 0,
+    "passed": true
+  },
+  {
+    "scanned_at": "2026-07-13T15:41:15.719993+00:00",
+    "target": "evaluation_data/clean",
+    "files_scanned": 100,
+    "total_findings": 0,
+    "critical": 0,
+    "high": 0,
+    "warning": 0,
+    "passed": true
+  },
+  {
+    "scanned_at": "2026-07-13T15:41:15.782726+00:00",
+    "target": "evaluation_data/vulnerable",
+    "files_scanned": 100,
+    "total_findings": 363,
+    "critical": 172,
+    "high": 164,
+    "warning": 27,
+    "passed": false
+  },
+  {
+    "scanned_at": "2026-07-14T17:56:23.577695+00:00",
+    "target": ".",
+    "files_scanned": 14,
+    "total_findings": 0,
+    "critical": 0,
+    "high": 0,
+    "warning": 0,
+    "passed": true
+  },
+  {
+    "scanned_at": "2026-07-14T17:56:52.867339+00:00",
+    "target": "evaluation_data/clean",
+    "files_scanned": 100,
+    "total_findings": 0,
+    "critical": 0,
+    "high": 0,
+    "warning": 0,
+    "passed": true
+  },
+  {
+    "scanned_at": "2026-07-14T17:56:52.947240+00:00",
+    "target": "evaluation_data/vulnerable",
+    "files_scanned": 100,
+    "total_findings": 317,
+    "critical": 163,
+    "high": 127,
+    "warning": 27,
+    "passed": false
+  },
+  {
+    "scanned_at": "2026-07-15T08:21:14.268328+00:00",
+    "target": ".",
+    "files_scanned": 14,
+    "total_findings": 0,
+    "critical": 0,
+    "high": 0,
+    "warning": 0,
+    "passed": true
+  },
+  {
+    "scanned_at": "2026-07-15T08:21:44.822333+00:00",
+    "target": "evaluation_data/clean",
+    "files_scanned": 100,
+    "total_findings": 0,
+    "critical": 0,
+    "high": 0,
+    "warning": 0,
+    "passed": true
+  },
+  {
+    "scanned_at": "2026-07-15T08:21:44.908309+00:00",
+    "target": "evaluation_data/vulnerable",
+    "files_scanned": 100,
+    "total_findings": 417,
+    "critical": 180,
+    "high": 214,
+    "warning": 23,
+    "passed": false
+  },
+  {
+    "scanned_at": "2026-07-15T08:26:29.969776+00:00",
+    "target": ".",
+    "files_scanned": 14,
+    "total_findings": 0,
+    "critical": 0,
+    "high": 0,
+    "warning": 0,
+    "passed": true
+  },
+  {
+    "scanned_at": "2026-07-15T08:26:56.901550+00:00",
+    "target": "evaluation_data/clean",
+    "files_scanned": 100,
+    "total_findings": 0,
+    "critical": 0,
+    "high": 0,
+    "warning": 0,
+    "passed": true
+  },
+  {
+    "scanned_at": "2026-07-15T08:26:57.016829+00:00",
+    "target": "evaluation_data/vulnerable",
+    "files_scanned": 100,
+    "total_findings": 441,
+    "critical": 191,
+    "high": 217,
+    "warning": 33,
+    "passed": false
+  },
+  {
+    "scanned_at": "2026-07-15T08:43:40.972741+00:00",
+    "target": ".",
+    "files_scanned": 14,
+    "total_findings": 0,
+    "critical": 0,
+    "high": 0,
+    "warning": 0,
+    "passed": true
+  },
+  {
+    "scanned_at": "2026-07-15T08:44:06.775645+00:00",
+    "target": "evaluation_data/clean",
+    "files_scanned": 100,
+    "total_findings": 0,
+    "critical": 0,
+    "high": 0,
+    "warning": 0,
+    "passed": true
+  },
+  {
+    "scanned_at": "2026-07-15T08:44:06.842973+00:00",
+    "target": "evaluation_data/vulnerable",
+    "files_scanned": 100,
+    "total_findings": 368,
+    "critical": 160,
+    "high": 186,
+    "warning": 22,
+    "passed": false
+  },
+  {
+    "scanned_at": "2026-07-17T11:59:20.963392+00:00",
+    "target": ".",
+    "files_scanned": 14,
+    "total_findings": 0,
+    "critical": 0,
+    "high": 0,
+    "warning": 0,
+    "passed": true
+  },
+  {
+    "scanned_at": "2026-07-17T11:59:48.937121+00:00",
+    "target": "evaluation_data/clean",
+    "files_scanned": 100,
+    "total_findings": 0,
+    "critical": 0,
+    "high": 0,
+    "warning": 0,
+    "passed": true
+  },
+  {
+    "scanned_at": "2026-07-17T11:59:49.045636+00:00",
+    "target": "evaluation_data/vulnerable",
+    "files_scanned": 100,
+    "total_findings": 416,
+    "critical": 180,
+    "high": 217,
+    "warning": 19,
+    "passed": false
+  },
+  {
+    "scanned_at": "2026-07-17T11:59:49.618718+00:00",
+    "target": ".",
+    "files_scanned": 14,
+    "total_findings": 0,
+    "critical": 0,
+    "high": 0,
+    "warning": 0,
+    "passed": true
+  },
+  {
+    "scanned_at": "2026-07-17T12:00:20.502090+00:00",
+    "target": "evaluation_data/clean",
+    "files_scanned": 100,
+    "total_findings": 0,
+    "critical": 0,
+    "high": 0,
+    "warning": 0,
+    "passed": true
+  },
+  {
+    "scanned_at": "2026-07-17T12:00:20.598478+00:00",
+    "target": "evaluation_data/vulnerable",
+    "files_scanned": 100,
+    "total_findings": 404,
+    "critical": 188,
+    "high": 187,
+    "warning": 29,
+    "passed": false
+  }
+]

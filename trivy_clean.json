@@ -1,0 +1,352 @@
+{
+  "SchemaVersion": 2,
+  "Trivy": {
+    "Version": "0.70.0"
+  },
+  "ReportID": "019f6ff3-2802-76e6-aaba-dfc13654cf7e",
+  "CreatedAt": "2026-07-17T12:00:34.306455507Z",
+  "ArtifactName": "evaluation_data/clean",
+  "ArtifactType": "filesystem",
+  "Results": [
+    {
+      "Target": ".",
+      "Class": "config",
+      "Type": "terraform",
+      "MisconfSummary": {
+        "Successes": 45,
+        "Failures": 0
+      }
+    },
+    {
+      "Target": "Dockerfile_worker_11.dockerfile",
+      "Class": "config",
+      "Type": "dockerfile",
+      "MisconfSummary": {
+        "Successes": 20,
+        "Failures": 0
+      }
+    },
+    {
+      "Target": "Dockerfile_worker_31.dockerfile",
+      "Class": "config",
+      "Type": "dockerfile",
+      "MisconfSummary": {
+        "Successes": 20,
+        "Failures": 0
+      }
+    },
+    {
+      "Target": "Dockerfile_worker_33.dockerfile",
+      "Class": "config",
+      "Type": "dockerfile",
+      "MisconfSummary": {
+        "Successes": 20,
+        "Failures": 0
+      }
+    },
+    {
+      "Target": "Dockerfile_worker_38.dockerfile",
+      "Class": "config",
+      "Type": "dockerfile",
+      "MisconfSummary": {
+        "Successes": 20,
+        "Failures": 0
+      }
+    },
+    {
+      "Target": "Dockerfile_worker_47.dockerfile",
+      "Class": "config",
+      "Type": "dockerfile",
+      "MisconfSummary": {
+        "Successes": 20,
+        "Failures": 0
+      }
+    },
+    {
+      "Target": "Dockerfile_worker_50.dockerfile",
+      "Class": "config",
+      "Type": "dockerfile",
+      "MisconfSummary": {
+        "Successes": 20,
+        "Failures": 0
+      }
+    },
+    {
+      "Target": "Dockerfile_worker_51.dockerfile",
+      "Class": "config",
+      "Type": "dockerfile",
+      "MisconfSummary": {
+        "Successes": 20,
+        "Failures": 0
+      }
+    },
+    {
+      "Target": "Dockerfile_worker_56.dockerfile",
+      "Class": "config",
+      "Type": "dockerfile",
+      "MisconfSummary": {
+        "Successes": 20,
+        "Failures": 0
+      }
+    },
+    {
+      "Target": "Dockerfile_worker_60.dockerfile",
+      "Class": "config",
+      "Type": "dockerfile",
+      "MisconfSummary": {
+        "Successes": 20,
+        "Failures": 0
+      }
+    },
+    {
+      "Target": "Dockerfile_worker_63.dockerfile",
+      "Class": "config",
+      "Type": "dockerfile",
+      "MisconfSummary": {
+        "Successes": 20,
+        "Failures": 0
+      }
+    },
+    {
+      "Target": "Dockerfile_worker_65.dockerfile",
+      "Class": "config",
+      "Type": "dockerfile",
+      "MisconfSummary": {
+        "Successes": 20,
+        "Failures": 0
+      }
+    },
+    {
+      "Target": "Dockerfile_worker_67.dockerfile",
+      "Class": "config",
+      "Type": "dockerfile",
+      "MisconfSummary": {
+        "Successes": 20,
+        "Failures": 0
+      }
+    },
+    {
+      "Target": "Dockerfile_worker_70.dockerfile",
+      "Class": "config",
+      "Type": "dockerfile",
+      "MisconfSummary": {
+        "Successes": 20,
+        "Failures": 0
+      }
+    },
+    {
+      "Target": "Dockerfile_worker_75.dockerfile",
+      "Class": "config",
+      "Type": "dockerfile",
+      "MisconfSummary": {
+        "Successes": 20,
+        "Failures": 0
+      }
+    },
+    {
+      "Target": "Dockerfile_worker_76.dockerfile",
+      "Class": "config",
+      "Type": "dockerfile",
+      "MisconfSummary": {
+        "Successes": 20,
+        "Failures": 0
+      }
+    },
+    {
+      "Target": "Dockerfile_worker_78.dockerfile",
+      "Class": "config",
+      "Type": "dockerfile",
+      "MisconfSummary": {
+        "Successes": 20,
+        "Failures": 0
+      }
+    },
+    {
+      "Target": "Dockerfile_worker_80.dockerfile",
+      "Class": "config",
+      "Type": "dockerfile",
+      "MisconfSummary": {
+        "Successes": 20,
+        "Failures": 0
+      }
+    },
+    {
+      "Target": "Dockerfile_worker_94.dockerfile",
+      "Class": "config",
+      "Type": "dockerfile",
+      "MisconfSummary": {
+        "Successes": 20,
+        "Failures": 0
+      }
+    },
+    {
+      "Target": "Dockerfile_worker_95.dockerfile",
+      "Class": "config",
+      "Type": "dockerfile",
+      "MisconfSummary": {
+        "Successes": 20,
+        "Failures": 0
+      }
+    },
+    {
+      "Target": "aws_infrastructure_1.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_10.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_100.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_13.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_20.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_25.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_26.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_27.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_30.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_39.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_4.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_40.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_43.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_44.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_46.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_48.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_49.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_5.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_52.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_54.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_59.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_66.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_77.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_79.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_81.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_82.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_84.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_85.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_88.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_89.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_9.tf",
+      "Class": "config",
+      "Type": "terraform"
+    },
+    {
+      "Target": "aws_infrastructure_90.tf",
+      "Class": "config",
+      "Type": "terraform"
+    }
+  ]
+}

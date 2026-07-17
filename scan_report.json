@@ -1,0 +1,10 @@
+{
+  "scanned_at": "2026-07-17T11:59:49.618718+00:00",
+  "files_scanned": 14,
+  "total_findings": 0,
+  "critical": 0,
+  "high": 0,
+  "warning": 0,
+  "passed": true,
+  "findings": []
+}
