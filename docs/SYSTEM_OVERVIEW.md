@@ -1682,6 +1682,16 @@ shapes into one table.
 - Trivy on the same corpus: several hundred CRITICAL/HIGH misconfigurations on
   vulnerable, zero on clean (independent cross-validation with the exact Trivy
   version the pipeline pins, v0.70.0).
+- Comparative baseline: a default Gitleaks v8.24.3 scan over the identical
+  vulnerable corpus flagged 48/100 files (52 percent file-level miss rate) and
+  detected none of the PII, NDPA, or container findings; it matched the custom
+  scanner line for line only on conventional secrets (see
+  GITLEAKS_COMPARISON.md for method and caveats).
+- Comparative baseline (Trivy as competitor rather than cross-validator):
+  config scan 65/100 files, secret scan 30/100, combined 95/100, with zero
+  coverage of BVNs, data sovereignty, encryption in transit, or Flutterwave
+  keys; five extensionless Dockerfiles escaped entirely (see
+  TRIVY_COMPARISON.md).
 - Unit tests: 40/40 passing; fixtures regenerated deterministically each run.
 - Repository self-scan: PASSED (the tool holds itself to its own standard).
 - The pipeline re-verifies all of the above on every push via the inverted

@@ -459,6 +459,24 @@ dashboard for a visual view. Design points worth writing up:
   before pushing, confirming zero CRITICAL/HIGH on clean and several hundred on
   vulnerable, so CI outcomes were known in advance rather than discovered from
   failed runs.
+- **Comparative baseline (Gitleaks)**: a default-configuration Gitleaks v8.24.3
+  scan over the identical vulnerable corpus flagged 48 of 100 files (52 percent
+  file-level miss rate) and 0 of the 269 compliance-category findings (PII,
+  NDPA, container). Its 78 findings coincide line for line with the custom
+  scanner's 78 secret-category findings, and its Paystack detections are an
+  accident of format collision with Stripe's key prefix. Full method, results,
+  and fairness caveats: docs/GITLEAKS_COMPARISON.md. This measurement converts
+  the project's motivating claim (generic scanners miss Nigerian-specific
+  compliance issues) from asserted to measured.
+- **Comparative baseline (Trivy)**: the same head-to-head was run against
+  Trivy v0.70.0 in both its modes. Its misconfiguration scan flagged 65 of
+  100 files (no Python file, and only 13 of 18 Dockerfiles due to a filename
+  convention); its secret scan flagged 30 (the Paystack keys, again via the
+  Stripe format collision). Combined coverage 95/100 at file level, but 0
+  coverage of BVNs, data sovereignty (no region-localisation check exists in
+  Trivy at any severity), encryption in transit, and Flutterwave keys. Full
+  method and tables: docs/TRIVY_COMPARISON.md. Together with the Gitleaks
+  study, both dominant classes of generic scanner are measured, not assumed.
 - **Evaluation baseline**: 100/100 vulnerable files detected by the custom
   scanner (finding totals vary between generated corpora, roughly 340 to 430,
   because each file receives a random mix of vulnerability templates; the
