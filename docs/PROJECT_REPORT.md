@@ -182,8 +182,12 @@ host namespaces, root containers, curl piped into a shell, world-writable
 permissions, and secrets in image layers. All credentials are synthetic and
 non-functional.
 
-The generator deletes and recreates its output directories on every run, because
-filenames vary between runs and stale files would otherwise skew counts. It also
+The generator seeds Python's random module with a fixed constant, so every run
+reproduces the identical 200-file corpus byte for byte, and the evaluation
+numbers (347 findings on the vulnerable half, and every figure in the
+comparative studies) are reproducible by anyone. It deletes and recreates its
+output directories on every run so the corpus always matches the current
+templates and seed. It also
 writes two deterministic fixture files used by pytest, so the unit tests never
 depend on the random corpus.
 
@@ -292,6 +296,18 @@ code) and a review date. The image scan references the file explicitly. For the
 dissertation this demonstrates the full vulnerability management loop: detect,
 assess exploitability in context, formally accept or remediate, document, schedule
 re-review.
+
+The re-review step was not hypothetical. On 2026-08-12 a routine pipeline run
+failed the container scan because Trivy's refreshed vulnerability database had
+published ten further HIGH CVEs in the same pinned pillow 10.4.0, all crafted
+image, font, or PDF parsing flaws fixed only in pillow 12.3.0 (still forbidden by
+streamlit 1.32). This is precisely the decay a risk-acceptance list is expected
+to undergo. The same assessment applied (the dashboard opens no image, font, or
+PDF files, so no call path reaches the vulnerable code), the ten CVEs were added
+to `.trivyignore`, and the review date was advanced to 2026-08-12. The incident
+is useful evidence that the process is real: a static allowlist silently rots,
+whereas a CI gate plus a dated review turns each newly published CVE into an
+explicit, documented decision rather than an unnoticed exposure.
 
 ### 5.5 Problem: Trivy could not write its output file
 
@@ -477,10 +493,24 @@ dashboard for a visual view. Design points worth writing up:
   Trivy at any severity), encryption in transit, and Flutterwave keys. Full
   method and tables: docs/TRIVY_COMPARISON.md. Together with the Gitleaks
   study, both dominant classes of generic scanner are measured, not assumed.
+- **Comparative baseline (tfsec and Checkov)**: the remaining two widely used
+  IaC scanners were measured the same way. tfsec v1.28.14 (Terraform-only,
+  deprecated into Trivy) flagged 19 of 100 files; Checkov 3.3.8 flagged 65
+  (no Python files, and the same extensionless-Dockerfile gap as Trivy).
+  Both caught the plaintext HTTP listener that Trivy missed, and Checkov
+  caught the planted AWS provider credentials, but both scored zero on PII
+  and data sovereignty. Checkov's open-source output has no severity
+  metadata, so it cannot be gated: it fails the fully compliant clean corpus
+  with 583 best-practice findings, one of which (mandatory S3 cross-region
+  replication) would actively push Nigerian data off the continent, against
+  NDPA s.41. Full tables: docs/TFSEC_CHECKOV_COMPARISON.md. Across all four
+  measured baselines (Gitleaks, Trivy, tfsec, Checkov), coverage of BVN/PII
+  and data sovereignty is zero.
 - **Evaluation baseline**: 100/100 vulnerable files detected by the custom
-  scanner (finding totals vary between generated corpora, roughly 340 to 430,
-  because each file receives a random mix of vulnerability templates; the
-  detection rate and the zero-false-positive result are the stable metrics).
+  scanner, 347 findings. The generator is seeded, so this exact corpus and
+  total are reproducible on any machine; changing the seed would change the
+  total but not the detection rate or the zero-false-positive result, which
+  are the stable metrics.
   0 findings on the 100-file clean corpus even in strict fail-on-warning mode.
   Trivy independently confirms the corpus design: hundreds of CRITICAL/HIGH
   misconfigurations on vulnerable, zero on clean.

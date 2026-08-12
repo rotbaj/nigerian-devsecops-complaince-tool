@@ -117,7 +117,7 @@ gitleaks dir evaluation_data/vulnerable --report-format json --report-path gitle
 gitleaks dir evaluation_data/clean --report-format json --report-path gitleaks_clean.json
 ```
 
-Finding counts vary between generated corpora because each file receives a
-random mix of templates; the category coverage result (zero on pii, ndpa, and
-container) is stable because it follows from Gitleaks' rule set, not from the
-random draw.
+The generator uses a fixed random seed, so regenerating reproduces the
+identical corpus and these exact numbers. Changing the seed would change the
+finding totals but not the category coverage result (zero on pii, ndpa, and
+container), which follows from Gitleaks' rule set, not from the random draw.

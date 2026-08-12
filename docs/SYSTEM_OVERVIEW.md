@@ -655,8 +655,11 @@ def gen_phone():
     return f"080{random.randint(10000000, 99999999)}"
 ```
 
-Output directories are deleted and recreated on every run (filenames vary
-between runs, so stale files would otherwise accumulate and skew counts).
+The module seeds Python's random generator with a fixed constant
+(`RANDOM_SEED = 699852`), so every run reproduces the identical 200-file
+corpus byte for byte and all documented evaluation numbers are reproducible.
+Output directories are deleted and recreated on every run so the corpus
+always matches the current templates and seed.
 
 ### 6.2 Vulnerable template: application code
 
@@ -1475,7 +1478,9 @@ pytest==8.0.0
 # (streamlit requires pillow<11 and protobuf<5; pyarrow>15 breaks pandas
 # 2.2.0), so upgrading requires replatforming the dashboard.
 #
-# Review date: 2026-07-13. Re-assess when the streamlit stack is upgraded.
+# Review date: 2026-08-12 (updated from 2026-07-13 after the CI image scan
+# flagged a further batch of pillow parsing CVEs published in the interim).
+# Re-assess when the streamlit stack is upgraded.
 
 # pillow 10.4.0: out-of-bounds write via crafted PSD image. The dashboard
 # never opens image files; pillow is only a transitive streamlit dependency.
@@ -1496,6 +1501,21 @@ CVE-2026-0994
 # pyarrow 15.0.0: DoS via use-after-free. Arrow only carries the app's own
 # DataFrames between server and browser, never untrusted data.
 CVE-2026-25087
+
+# Additional pillow parsing CVEs, accepted 2026-08-12. All are DoS or memory
+# corruption reached only by parsing a crafted image, font, or PDF file;
+# this dashboard opens none of those. Fixed only in pillow 12.3.0, which
+# streamlit 1.32 forbids (pillow<11).
+CVE-2026-54058
+CVE-2026-54059
+CVE-2026-54060
+CVE-2026-55379
+CVE-2026-55380
+CVE-2026-59197
+CVE-2026-59199
+CVE-2026-59200
+CVE-2026-59204
+CVE-2026-59205
 ```
 
 ---
@@ -1673,10 +1693,10 @@ shapes into one table.
 
 ## 14. Evaluation Results
 
-- Custom scanner on the vulnerable corpus: 100/100 files detected (finding
-  totals vary by generated corpus, roughly 340 to 430, since each file
-  receives a random mix of vulnerability templates; the detection rate is the
-  stable metric).
+- Custom scanner on the vulnerable corpus: 100/100 files detected, 347
+  findings. The seeded generator reproduces this exact corpus on any machine;
+  a different seed would change the total but not the detection rate, which
+  is the stable metric.
 - Custom scanner on the clean corpus: 0 findings, even in strict
   fail-on-warning mode (zero false positives).
 - Trivy on the same corpus: several hundred CRITICAL/HIGH misconfigurations on
@@ -1692,6 +1712,14 @@ shapes into one table.
   coverage of BVNs, data sovereignty, encryption in transit, or Flutterwave
   keys; five extensionless Dockerfiles escaped entirely (see
   TRIVY_COMPARISON.md).
+- Comparative baseline (tfsec and Checkov): tfsec flagged 19/100 files
+  (Terraform-only by design), Checkov 65/100 (no Python, 13/18 Dockerfiles);
+  both caught the Terraform HTTP listener, neither covers PII or data
+  sovereignty, and ungated Checkov fails the fully compliant clean corpus
+  with 583 best-practice findings (see TFSEC_CHECKOV_COMPARISON.md). Summary
+  across all four measured baselines: custom 100/100 files, Trivy 95,
+  Checkov 65, Gitleaks 48, tfsec 19; all four generic tools score zero on
+  BVN/PII and data sovereignty.
 - Unit tests: 40/40 passing; fixtures regenerated deterministically each run.
 - Repository self-scan: PASSED (the tool holds itself to its own standard).
 - The pipeline re-verifies all of the above on every push via the inverted

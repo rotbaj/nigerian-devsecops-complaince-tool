@@ -153,6 +153,6 @@ gh run list --workflow devsecops-pipeline.yml --limit 5
 gh run view <run-id> --json jobs
 ```
 
-Finding totals vary between generated corpora (roughly 340 to 430), so timing
-runs should regenerate the corpus first with `python generate_eval_data.py`
-for a like-for-like comparison.
+The generator uses a fixed random seed, so `python generate_eval_data.py`
+reproduces the identical corpus and the scan produces the same 347 findings
+on every machine, making timing runs directly comparable.

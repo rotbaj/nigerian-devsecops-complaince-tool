@@ -72,7 +72,7 @@ Two structural findings beyond the categories:
 
 1. **Filename-convention dependency.** Trivy identified only 13 of the 18
    Dockerfiles: it recognises `*.dockerfile` but not names like
-   `Dockerfile_api_28` (no extension). Those five files, each containing a
+   `Dockerfile_api_14` (no extension). Those five files, each containing a
    root user, an ENV secret, and an unpinned image, are the five files that
    escaped Trivy entirely. The custom scanner treats any basename starting or
    ending with `dockerfile` as a Dockerfile and caught all 18.
@@ -121,6 +121,7 @@ trivy fs evaluation_data/vulnerable --scanners secret --format json --output tri
 trivy config evaluation_data/clean --severity CRITICAL,HIGH   # expect no findings
 ```
 
-Finding counts vary between generated corpora; the category-coverage result
-(zero on pii, data sovereignty, encryption in transit, and Flutterwave keys)
-is stable because it follows from Trivy's rule set, not from the random draw.
+The generator uses a fixed random seed, so regenerating reproduces the
+identical corpus and these exact numbers. The category-coverage result (zero
+on pii, data sovereignty, encryption in transit, and Flutterwave keys) does
+not depend on the seed at all; it follows from Trivy's rule set.

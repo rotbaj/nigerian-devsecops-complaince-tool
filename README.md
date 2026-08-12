@@ -84,7 +84,9 @@ This writes the 200 evaluation files plus the 2 fixture files the unit tests nee
 ```bash
 python compliance_engine/scanner.py evaluation_data/vulnerable
 ```
-Expected result: FAILED, roughly 350 findings across all 100 files, exit code 1.
+Expected result: FAILED, exactly 347 findings across all 100 files, exit code 1.
+The generator uses a fixed random seed, so every regeneration produces the same
+corpus and the same totals.
 
 4. Scan the clean set:
 ```bash

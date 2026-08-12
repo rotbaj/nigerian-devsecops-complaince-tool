@@ -12,10 +12,10 @@ the custom scanner's results.
 
 - Tools: tfsec v1.28.14 and Checkov 3.3.8 (open-source distribution), default
   rules, no custom policies.
-- Corpus: the same generated corpus as the other studies (this run: 30
-  Python, 19 Terraform, 33 Kubernetes, 18 Dockerfiles in the vulnerable
-  half; the clean half contains 41 Terraform files and 18 Dockerfiles among
-  its 100).
+- Corpus: the same generated corpus as the other studies (30 Python, 19
+  Terraform, 33 Kubernetes, 18 Dockerfiles in the vulnerable half; the clean
+  half is 35 Terraform, 36 Python, and 29 Dockerfiles, 16 of which carry the
+  `.dockerfile` extension).
 - Commands:
 
 ```bash
@@ -36,12 +36,12 @@ checkov -d evaluation_data/clean -o json
 | Vulnerable files flagged (of 100) | 100 | 19 | 65 |
 | File-level miss rate | 0 percent | 81 percent | 35 percent |
 | Findings on vulnerable corpus | 347 | 513 (304 CRITICAL/HIGH) | 1,532 failed checks |
-| Clean-corpus findings at a CRITICAL/HIGH gate | 0 | 0 (164 LOW/MEDIUM ungated) | not gateable (see 5.1) |
+| Clean-corpus findings at a CRITICAL/HIGH gate | 0 | 0 (140 LOW/MEDIUM ungated) | not gateable (see 5.1) |
 
 - tfsec scans Terraform only, by design: it flagged all 19 Terraform files
   (every one with CRITICAL/HIGH findings) and cannot see the other 81.
 - Checkov flagged all Terraform and Kubernetes files, 13 of 18 Dockerfiles
-  (the same extensionless-filename gap Trivy has: `Dockerfile_api_28` is not
+  (the same extensionless-filename gap Trivy has: `Dockerfile_api_14` is not
   recognised, `*.dockerfile` is), and 0 of 30 Python files. Its secrets
   framework only scans files an IaC framework already recognises unless
   `--enable-secret-scan-all-files` is set, which is off by default.
@@ -98,23 +98,36 @@ never by provider identity).
 1. **Checkov cannot be severity-gated in its open-source form.** Its OSS
    output carries no severity metadata (severities are an enterprise-platform
    feature), so there is no equivalent of the pipeline's CRITICAL/HIGH gate.
-   Consequence on the clean corpus: 583 failed checks across all 41 clean
-   Terraform files and 9 recognised clean Dockerfiles, all best-practice
-   items outside this project's policy (access logging, versioning,
-   cross-region replication, lifecycle configuration, and similar). None is a
-   planted issue. A CI gate wired to default Checkov would block the fully
+   Consequence on the clean corpus: 506 failed checks, none a planted issue.
+   490 are 14 best-practice Terraform checks repeated across all 35 clean
+   files (EBS not using a customer-managed key, RDS performance insights,
+   Multi-AZ, log exports, automatic minor upgrades, enhanced monitoring,
+   copy-tags-to-snapshots, Postgres query logging, S3 access logging, S3
+   event notifications, S3 lifecycle configuration, S3 versioning, S3
+   cross-region replication, and an undefined KMS key policy); the other 16
+   are missing HEALTHCHECK instructions on the 16 recognised clean
+   Dockerfiles. A CI gate wired to default Checkov would block the fully
    compliant corpus, which is a measured illustration of why a compliance
    gate must encode a deliberate, severity-ranked policy rather than the
    union of every available best practice.
-2. **tfsec at the same gate is clean.** Restricted to CRITICAL/HIGH for
-   parity with the pipeline, tfsec produces zero findings on the clean corpus
-   (its 164 LOW/MEDIUM findings are the same best-practice class as
-   Checkov's).
-3. tfsec's 81 percent file-level miss rate is by scope, not by defect: it is
+2. **One Checkov clean-corpus check actively conflicts with the compliance
+   policy.** CKV_AWS_144 demands cross-region replication for S3 buckets.
+   AWS operates exactly one African region, so replicating an af-south-1
+   bucket cross-region necessarily moves Nigerian data off the continent,
+   the outcome NDPA 2023 s.41 restricts. A generic best practice can
+   contradict a local regulatory requirement, which is a further argument
+   for policy-aware rule sets over generic ones.
+3. **tfsec at the pipeline's gate is clean.** Restricted to CRITICAL/HIGH
+   for parity, tfsec produces zero findings on the clean corpus. Its 140
+   ungated findings are four LOW/MEDIUM checks repeated across the 35 clean
+   Terraform files (missing S3 access logging, missing S3 versioning, EBS
+   without a customer-managed key, and RDS performance insights disabled),
+   the same best-practice class as Checkov's.
+4. tfsec's 81 percent file-level miss rate is by scope, not by defect: it is
    a Terraform-only tool. It is included because a team standardised on tfsec
    for IaC scanning would still have the full measured gap on Python secrets,
    PII, Kubernetes, and Dockerfiles.
-4. As with the other studies, none of this claims the tools are weak inside
+5. As with the other studies, none of this claims the tools are weak inside
    their scopes; on Terraform security misconfiguration both are strong. The
    measured claim is that their scopes do not include the regulatory
    categories this project enforces.
@@ -149,6 +162,6 @@ checkov -d evaluation_data/vulnerable -o json --output-file-path checkov_vulnera
 checkov -d evaluation_data/clean -o json --output-file-path checkov_clean
 ```
 
-Finding counts vary between generated corpora; the category-coverage results
-are stable because they follow from each tool's rule set, not from the random
-draw.
+The generator uses a fixed random seed, so regenerating reproduces the
+identical corpus and these exact numbers. The category-coverage results do
+not depend on the seed; they follow from each tool's rule set.
