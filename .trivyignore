@@ -7,7 +7,9 @@
 # (streamlit requires pillow<11 and protobuf<5; pyarrow>15 breaks pandas
 # 2.2.0), so upgrading requires replatforming the dashboard.
 #
-# Review date: 2026-07-13. Re-assess when the streamlit stack is upgraded.
+# Review date: 2026-08-12 (updated from 2026-07-13 after the CI image scan
+# flagged a further batch of pillow parsing CVEs published in the interim).
+# Re-assess when the streamlit stack is upgraded.
 
 # pillow 10.4.0: out-of-bounds write via crafted PSD image. The dashboard
 # never opens image files; pillow is only a transitive streamlit dependency.
@@ -28,3 +30,26 @@ CVE-2026-0994
 # pyarrow 15.0.0: DoS via use-after-free. Arrow only carries the app's own
 # DataFrames between server and browser, never untrusted data.
 CVE-2026-25087
+
+# Additional pillow parsing CVEs, accepted 2026-08-12.
+# All are DoS or memory-corruption bugs reached only by parsing a crafted
+# image, font, or PDF file. This dashboard opens no image, font, or PDF
+# files; pillow is a transitive streamlit dependency with no reachable
+# call path. All are fixed only in pillow 12.3.0, which streamlit 1.32
+# forbids (pillow<11), so the same replatforming constraint applies.
+# IDs are listed bare (Trivy reads each non-comment line as one finding ID):
+# 54058 crafted McIdas AREA image; 54059 crafted PCF font; 54060 excessive
+# memory allocation; 55379 crafted BDF font; 55380 crafted GD 2.x image;
+# 59197 native heap out-of-bounds write; 59199 out-of-bounds write in image
+# processing; 59200 crafted PDF stream; 59204 crafted JPEG2000 image;
+# 59205 native heap corruption in ImageCms transform.
+CVE-2026-54058
+CVE-2026-54059
+CVE-2026-54060
+CVE-2026-55379
+CVE-2026-55380
+CVE-2026-59197
+CVE-2026-59199
+CVE-2026-59200
+CVE-2026-59204
+CVE-2026-59205
