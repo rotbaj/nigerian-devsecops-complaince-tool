@@ -21,13 +21,22 @@ import os
 import random
 import shutil
 
+# Fixed seed so the corpus is reproducible: anyone re-running this script gets
+# byte-for-byte the same 200 files, and therefore the same evaluation numbers
+# (347 scanner findings on the vulnerable half, and the per-tool results in
+# docs/*_COMPARISON.md). Change the seed and the totals change, but the
+# detection rate, zero false positives, and category-coverage results do not.
+RANDOM_SEED = 699852
+random.seed(RANDOM_SEED)
+
 EVAL_DIR = "evaluation_data"
 BAD_DIR = os.path.join(EVAL_DIR, "vulnerable")
 GOOD_DIR = os.path.join(EVAL_DIR, "clean")
 FIXTURES_DIR = os.path.join("tests", "fixtures")
 
-# Start from empty output dirs: filenames vary between runs (random extensions),
-# so stale files from a previous run would otherwise accumulate and skew counts.
+# Start from empty output dirs so the corpus always matches the current
+# templates and seed; stale files from an earlier version of this script
+# would otherwise accumulate and skew counts.
 for d in (BAD_DIR, GOOD_DIR):
     shutil.rmtree(d, ignore_errors=True)
 

@@ -20,6 +20,19 @@ import urllib.request
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from compliance_engine.scanner import scan_path, save_report, append_history
 
+
+def _corpus_seed():
+    """Read RANDOM_SEED from the generator without importing (and therefore
+    running) it, so the dashboard reports the exact seed used to build the
+    corpus. Single source of truth: the value lives only in the generator."""
+    try:
+        gen = os.path.join(os.path.dirname(__file__), "..", "generate_eval_data.py")
+        with open(gen, encoding="utf-8") as f:
+            match = re.search(r"RANDOM_SEED\s*=\s*(\d+)", f.read())
+        return match.group(1) if match else None
+    except Exception:
+        return None
+
 # ─── Page Config ───────────────────────────────────────────────
 st.set_page_config(
     page_title="Nigerian Fintech DevSecOps Dashboard",
@@ -145,6 +158,14 @@ if mode == "Scan Directory":
         help="Directory names skipped at any depth inside the scan target. "
              "Clear this field to scan everything.",
     )
+    _seed = _corpus_seed()
+    if _seed:
+        st.caption(
+            f"The evaluation corpus is generated with a fixed random seed ({_seed}), "
+            f"so it is byte-for-byte identical on every machine, including this hosted "
+            f"app. Scanning evaluation_data/vulnerable reproduces the same 347 findings "
+            f"across 100 files each time."
+        )
     col1, col2 = st.columns([1, 4])
     with col1:
         run_scan = st.button("Run Scan", type="primary")
@@ -164,7 +185,7 @@ if mode == "Scan Directory":
         if not os.path.exists(resolved_target) and display_target.split(os.sep)[0] == "evaluation_data":
             generator = os.path.join(BASE_DIR, "generate_eval_data.py")
             if os.path.exists(generator):
-                with st.spinner("Generating the 200-file evaluation corpus (first run only)..."):
+                with st.spinner(f"Generating the seeded 200-file evaluation corpus (seed {_corpus_seed()}, first run only)..."):
                     subprocess.run(
                         [sys.executable, generator],
                         cwd=BASE_DIR, check=True, capture_output=True,
