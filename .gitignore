@@ -1,6 +1,9 @@
 # Scan output: may contain redacted but sensitive path info
 reports/
 
+# Personal study notes for an unrelated project; not part of this repo
+docs/m.md
+
 # Generated synthetic data (contains fake secrets; regenerate with generate_eval_data.py)
 evaluation_data/
 tests/fixtures/
