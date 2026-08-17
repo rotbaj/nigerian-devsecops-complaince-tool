@@ -17,10 +17,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -35,7 +35,7 @@ jobs:
           python compliance_engine/scanner.py . --exclude tests,evaluation_data,reports --report reports/scan_report.json
 
       - name: Upload Compliance Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()   # Upload even if scan fails so the team can review
         with:
           name: compliance-report
@@ -58,10 +58,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -187,7 +187,7 @@ jobs:
           EOF
 
       - name: Upload evaluation reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: evaluation-reports
@@ -217,10 +217,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download all scan reports
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: ci_reports
 
@@ -271,7 +271,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Build Docker image
         run: docker build -t fintech-app:${{ github.sha }} .
@@ -323,7 +323,7 @@ jobs:
           EOF
 
       - name: Upload image scan report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: trivy-image-report
@@ -348,10 +348,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -377,7 +377,7 @@ jobs:
 
     steps:
       - name: Download compliance report
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: compliance-report
           path: reports/
