@@ -292,6 +292,36 @@ jobs:
           # Documented risk acceptances (see .trivyignore for justifications)
           trivyignores: ".trivyignore"
 
+      - name: List the CVEs that failed the image scan
+        # The scan writes JSON for the dashboard, so a failure prints nothing
+        # in the log and the CVE IDs can only be read by downloading the
+        # artifact. Print them here, ready to paste into .trivyignore.
+        if: failure()
+        run: |
+          python3 - <<'EOF'
+          import json
+
+          with open("reports/trivy_image.json") as f:
+              report = json.load(f)
+
+          rows = [
+              (v["Severity"], v["VulnerabilityID"], r.get("Target", ""),
+               v.get("PkgName", ""), v.get("InstalledVersion", ""),
+               v.get("FixedVersion", "(none)"))
+              for r in report.get("Results") or []
+              for v in r.get("Vulnerabilities") or []
+          ]
+
+          print(f"{len(rows)} finding(s) blocked the build:\n")
+          for severity, cve, target, pkg, installed, fixed in sorted(rows):
+              print(f"  {severity:<9} {cve:<20} {pkg} {installed} "
+                    f"-> fixed in {fixed}    [{target}]")
+
+          print("\nIDs only, to paste into .trivyignore:\n")
+          for cve in sorted({row[1] for row in rows}):
+              print(cve)
+          EOF
+
       - name: Upload image scan report
         uses: actions/upload-artifact@v4
         if: always()
