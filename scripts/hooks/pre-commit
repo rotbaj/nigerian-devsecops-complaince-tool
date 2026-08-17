@@ -4,15 +4,31 @@
 # Blocks the commit if the scanner finds CRITICAL or HIGH severity issues.
 # Bypass in an emergency with: git commit --no-verify
 
+# Pick an interpreter. Prefer the project venv, so the hook uses the same
+# Python the tests and dashboard do. Fall back to the system one: Windows has
+# no real "python3" (the name resolves to a Microsoft Store stub that exists
+# but refuses to run), which is why the bare name is not enough on its own.
+if [ -x ".venv/bin/python" ]; then
+    PY=".venv/bin/python"
+elif [ -x ".venv/Scripts/python.exe" ]; then
+    PY=".venv/Scripts/python.exe"
+elif python3 -c "" >/dev/null 2>&1; then
+    PY="python3"
+elif python -c "" >/dev/null 2>&1; then
+    PY="python"
+else
+    PY="py"
+fi
+
 echo "Running compliance scan before commit..."
-python3 compliance_engine/scanner.py . --exclude tests,evaluation_data,reports
+"$PY" compliance_engine/scanner.py . --exclude tests,evaluation_data,reports
 status=$?
 
 if [ $status -ne 0 ]; then
     echo ""
     echo "Commit blocked: the issues above must be fixed before this code is committed."
     echo "   To inspect them visually, run:"
-    echo "       python3 -m streamlit run dashboard/app.py"
+    echo "       $PY -m streamlit run dashboard/app.py"
     exit $status
 fi
 

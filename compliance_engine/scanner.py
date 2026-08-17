@@ -413,6 +413,12 @@ if __name__ == "__main__":
     import sys
     import argparse
 
+    # Windows consoles default to cp1252, which cannot encode the box-drawing
+    # characters and severity icons printed below, so the scanner would crash
+    # before showing a single finding. Force UTF-8 output on every platform.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
     parser = argparse.ArgumentParser(description="Nigerian Fintech DevSecOps Compliance Scanner")
     parser.add_argument("path", help="File or directory to scan")
     parser.add_argument("--report", default="reports/scan_report.json", help="Output report path")

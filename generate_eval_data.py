@@ -20,6 +20,13 @@ Run the unit tests (which depend on tests/fixtures/):
 import os
 import random
 import shutil
+import sys
+
+# Windows consoles default to cp1252 and crash on the arrows and box-drawing
+# characters in the summary printed at the end. Force UTF-8 output on every
+# platform; on macOS and Linux stdout is already UTF-8, so this changes nothing.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 # Fixed seed so the corpus is reproducible: anyone re-running this script gets
 # byte-for-byte the same 200 files, and therefore the same evaluation numbers
@@ -480,10 +487,10 @@ resource "aws_ebs_volume" "core_db" {
 
 print("Writing test fixture files to tests/fixtures/ ...")
 
-with open(os.path.join(FIXTURES_DIR, "bad_code_sample.py"), "w") as f:
+with open(os.path.join(FIXTURES_DIR, "bad_code_sample.py"), "w", encoding="utf-8") as f:
     f.write(FIXTURE_BAD_PYTHON)
 
-with open(os.path.join(FIXTURES_DIR, "bad_terraform.tf"), "w") as f:
+with open(os.path.join(FIXTURES_DIR, "bad_terraform.tf"), "w", encoding="utf-8") as f:
     f.write(FIXTURE_BAD_TERRAFORM)
 
 print("Generating 200 realistic evaluation files ...")
@@ -512,7 +519,7 @@ for i in range(1, 101):
         ext = ".dockerfile" if random.choice([True, False]) else ""
         filename = os.path.join(BAD_DIR, f"Dockerfile_api_{i}{ext}")
 
-    with open(filename, "w") as f:
+    with open(filename, "w", encoding="utf-8") as f:
         f.write(content)
 
 for i in range(1, 101):
@@ -539,7 +546,7 @@ for i in range(1, 101):
         ext = ".dockerfile" if random.choice([True, False]) else ""
         filename = os.path.join(GOOD_DIR, f"Dockerfile_worker_{i}{ext}")
 
-    with open(filename, "w") as f:
+    with open(filename, "w", encoding="utf-8") as f:
         f.write(content)
 
 print("Done.")

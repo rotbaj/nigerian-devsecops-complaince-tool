@@ -65,22 +65,77 @@ subfolders of the scan target, never to the target itself.
 
 ---
 
-## Step-by-Step
+## Setup
 
-Run everything from the project root folder.
+The project needs **Python 3.12**, the same version the pipeline and the Docker
+image use. Python 3.13 does not work: pandas, numpy and pyarrow are pinned to
+releases that ship no prebuilt files for 3.13, so `pip` tries to build them from
+source and stops with a missing-compiler error. Install 3.12 rather than lifting
+the pins, which exist to stop the dashboard charts from crashing.
 
-1. Install dependencies (once):
+Check which versions you have:
+
 ```bash
+py -0p        # Windows
+python3 -V    # macOS and Linux
+```
+
+Everything below installs into a virtual environment in the project folder, so
+nothing touches the system Python. Run it all from the project root.
+
+### Windows (Git Bash)
+
+Install Python 3.12 if it is missing:
+
+```bash
+winget install --id Python.Python.3.12 --scope user
+```
+
+Create the environment and fill it:
+
+```bash
+py -3.12 -m venv .venv
+.venv/Scripts/python.exe -m pip install -r requirements.txt
+```
+
+Turn it on for the rest of the session:
+
+```bash
+source .venv/Scripts/activate
+```
+
+### macOS and Linux
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-2. Generate the test data (once, or whenever you want a fresh set):
+### Either way
+
+While the environment is on, the prompt shows `(.venv)`, `python` and
+`streamlit` point inside it, and every command in the next section works the
+same on all three systems. A new terminal starts without it, so turn it on
+again. Run `deactivate` to leave it.
+
+To skip activation, call the interpreter by path instead:
+`.venv/Scripts/python.exe` on Windows, `.venv/bin/python` elsewhere.
+
+---
+
+## Step-by-Step
+
+Run everything from the project root folder, with the environment turned on
+(see Setup above).
+
+1. Generate the test data (once, or whenever you want a fresh set):
 ```bash
 python generate_eval_data.py
 ```
 This writes the 200 evaluation files plus the 2 fixture files the unit tests need.
 
-3. Scan the vulnerable set:
+2. Scan the vulnerable set:
 ```bash
 python compliance_engine/scanner.py evaluation_data/vulnerable
 ```
@@ -88,26 +143,35 @@ Expected result: FAILED, exactly 347 findings across all 100 files, exit code 1.
 The generator uses a fixed random seed, so every regeneration produces the same
 corpus and the same totals.
 
-4. Scan the clean set:
+3. Scan the clean set:
 ```bash
 python compliance_engine/scanner.py evaluation_data/clean
 ```
 Expected result: PASSED, 0 findings, exit code 0.
 
-5. Scan the project's own source code:
+4. Scan the project's own source code:
 ```bash
 python compliance_engine/scanner.py . --exclude tests,evaluation_data,reports
 ```
 Expected result: PASSED. This is the same command the CI pipeline runs on every push.
 
-6. Run the unit tests:
+5. Run the unit tests:
 ```bash
 pytest tests/ -v
 ```
+Expected result: 40 passed.
 
-7. Start the dashboard:
+6. Start the dashboard:
 ```bash
 streamlit run dashboard/app.py
+```
+Without activating, call it through the environment's interpreter:
+```bash
+# Windows
+.venv/Scripts/python.exe -m streamlit run dashboard/app.py
+
+# macOS and Linux
+.venv/bin/python -m streamlit run dashboard/app.py
 ```
 Then open http://localhost:8501 in the browser:
 - To show detection, enter `evaluation_data/vulnerable` in the path box and click Run Scan.
@@ -143,6 +207,9 @@ docker run --rm -v $(pwd):/app nigerian-devsecops python compliance_engine/scann
 # Run the dashboard in the container
 docker run -p 8501:8501 nigerian-devsecops
 ```
+
+On Windows, Git Bash rewrites the `/app` path and the mount fails. Put
+`MSYS_NO_PATHCONV=1` in front of the `docker run` line to stop it.
 
 ---
 
