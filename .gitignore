@@ -7,7 +7,7 @@ docs/m.md
 # Generated synthetic data (contains fake secrets; regenerate with generate_eval_data.py)
 evaluation_data/
 tests/fixtures/
-
+startup
 # Python
 __pycache__/
 *.py[cod]
