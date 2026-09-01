@@ -8,7 +8,7 @@ docs/m.md
 evaluation_data/
 tests/fixtures/
 startup
-
+infra_test
 # Python
 __pycache__/
 *.py[cod]
